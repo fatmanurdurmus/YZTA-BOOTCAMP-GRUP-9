@@ -1,76 +1,57 @@
-# **Takım İsmi**
+# CarbonPilot AI
 
-Takım X
+CarbonPilot AI is an agentic CBAM/SKDM compliance and carbon cost intelligence platform for industrial exporters. The MVP focuses on demir-celik exporters and provides deterministic Scope 1, Scope 2, and CBAM-focused Scope 3 calculations with audit-ready evidence.
 
-# Ürün İle İlgili Bilgiler
+## Product Vision
 
-## Takım Elemanları
+Industrial exporters need reliable carbon accounting before CBAM/SKDM costs become operational and financial risk. CarbonPilot AI ingests ERP logs, invoices, shipment documents, or structured activity data; validates carbon-relevant parameters; calculates emissions with deterministic Python code; retrieves legal/factor references with Law-RAG; audits the output with a Critic Agent; and prepares PDF/JSON-ready reports.
 
-- John Doe: Product Owner
-- Jane Doe: Scrum Master
-- Atıl Samancıoğlu: Team Member/Developer
+## Tech Stack
 
-## Ürün İsmi
+- Backend: Python, FastAPI, Pydantic v2, SQLAlchemy/Alembic-ready structure.
+- Agent orchestration: LangGraph StateGraph with guarded loops and checkpoint-ready state.
+- Database: PostgreSQL with pgvector.
+- Frontend: React, Vite, TypeScript, Tailwind CSS, Recharts.
+- Tests: pytest for backend, Vitest/Playwright-ready frontend structure.
+- Observability: LangSmith-first configuration.
 
---Movie App--
+## Repository Structure
 
-## Ürün Açıklaması
+```text
+apps/
+  backend/        FastAPI, schemas, deterministic calculation engine, agent graph stubs
+  frontend/       React + Vite dashboard
+docs/             Product, architecture, roadmap, Jira workflow, methodology
+infra/            Docker Compose and database bootstrap assets
+packages/         Shared schema notes for future generated contracts
+ProjectManagement Bootcamp sprint artifacts
+```
 
-- Movie App uygulamamız ile insanların izlemek istediği filmlere ve dizilere daha kolay karar vermesini sağlayacağız. İçerisinde binlerce filmi barındıran uygulamamız aynı zamanda Netflix, Prime vb. platformlarda yayınlanıp yayınlanmadığını ve IMDB puanlarını da gösterecek.
+## Local Backend
 
-## Ürün Özellikleri
+```bash
+cd apps/backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+python -m pytest
+uvicorn carbonpilot.main:app --reload
+```
 
-- Filmleri türüne göre ayırma
-- Filmlerin yönetmen, aktör, aktris vb. bilgilerini posteriyle birlikte gösterme
-- IMDB ve Rotten Tomatoes puanlarını gösterme
-- Netflix'te ve Prime'da bulunurluğunu gösterme
+## Local Frontend
 
-## Hedef Kitle
+```bash
+cd apps/frontend
+npm install
+npm run dev
+```
 
-- Netflix kullanıcıları
-- Prime kullanıcıları
-- Sinema severler
-- Dizi severler
-- 15 - 65 yaş arası kullanıcılar
+## Safety Rules
 
-## Product Backlog URL
+- Do not push, force push, merge PRs, deploy, delete remote resources, or mark Jira issues Done without explicit approval.
+- Emission calculations are deterministic Python code, never free-form LLM reasoning.
+- LLM outputs must be schema-validated before entering the database, calculation engine, or reporting pipeline.
 
-[Miro Backlog Board](https://miro.com/app/board/uXjVOSSCpsI=/)
+## Sprint 1 Goal
 
----
-
-# Sprint 1
-
-- **Backlog düzeni ve Story seçimleri**: Backlog'umuz ilk yapılacak story'lere göre düzenlenmiştir. Sprint başına tahmin edilen puan sayısını geçmeyecek şekilde sıradan seçimler yapılmaktadır. Story başına çıkan tahmin puanı, toplam puanın yarısından az tutulmuştur. 
-
-Story'ler yapılacak işlere (task'lere) bölünmüştür. Miro Board'da gözüken kırmızı item'lar yapılacak işleri (task) gösterirken, mavi item'lar story'leri temsil etmektedir.
-
-- **Daily Scrum**: Daily Scrum toplantılarının zamansal sebeplerden ötürü Slack üzerinden yapılmasına karar verilmiştir. Daily Scrum toplantısı örneği jpeg veya word olarak Readme'de tarafımızdan paylaşılmaktadır: [Sprint 1 Daily Scrum Chats](https://github.com/OyunveUygulamaAkademisi/BootcampScrumTemplate/blob/main/ProjectManagement/Sprint1Documents/DailyScrumMeetingNotesSprint1.docx?raw=true)
-
-- **Sprint board update**: Sprint board screenshotları: 
-![Backlog 1](https://raw.githubusercontent.com/OyunveUygulamaAkademisi/BootcampScrumTemplate/main/ProjectManagement/Sprint1Documents/backlog1.png) 
-![Backlog 2](https://raw.githubusercontent.com/OyunveUygulamaAkademisi/BootcampScrumTemplate/main/ProjectManagement/Sprint1Documents/backlog2.png) 
-![Backlog 3](https://raw.githubusercontent.com/OyunveUygulamaAkademisi/BootcampScrumTemplate/main/ProjectManagement/Sprint1Documents/backlog3.png)
-
-- **Ürün Durumu**: Ekran görüntüleri:
-  ![Screenshot 1](https://github.com/OyunveUygulamaAkademisi/BootcampScrumTemplate/blob/main/ProjectManagement/Sprint1Documents/productss1.png?raw=true)
-  ![Screenshot 2](https://github.com/OyunveUygulamaAkademisi/BootcampScrumTemplate/blob/main/ProjectManagement/Sprint1Documents/productss2.png?raw=true)
-
-- **Sprint Review**: 
-Alınan kararlar: Veritabanı oluşturması email ile toplanacak veriler için gerekli görülmüştür. Fakat bir yandan da veritabanı form sayfası için gerekli olmamıştır. O sebeple PBI bir sonraki sprint'e aktarılmıştır. Çıkan ürünün çalışmasında ve testlerinde bir problem görülmemiştir. Ekstra koyulması gereken özellikler belirlenmiştir. Sprint Review katılımcıları: ......
-
-- **Sprint Retrospective:**
-  - Takım içindeki görev dağılımıyla ilgili düzenleme yapılması kararı alınmıştır
-  - Tahmin puanları gözden geçirilmeli ve sprint planlama toplantılarında gerekli geri bildirimlerin developer'lar tarafından verildiğine emin olunmalı
-  - Unit test'ler için ayrılan efor/saat arttırılmalı 
-
----
-
-# Sprint 2
-
-
----
-
-# Sprint 3
-
----
+Sprint 1 establishes the monorepo, backend/frontend skeletons, strict schemas, Scope 1/2/CBAM-focused Scope 3 calculation engine, Law-RAG stub, LangGraph skeleton, guardrails, and pytest structure.

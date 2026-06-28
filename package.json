@@ -1,0 +1,15 @@
+{
+  "name": "carbonpilot-ai",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Agentic CBAM/SKDM compliance and carbon cost intelligence platform.",
+  "workspaces": [
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev:frontend": "npm --workspace apps/frontend run dev",
+    "build:frontend": "npm --workspace apps/frontend run build",
+    "test:frontend": "npm --workspace apps/frontend run test",
+    "test:backend": "cd apps/backend && python -m pytest"
+  }
+}

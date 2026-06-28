@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: carbonpilot
+      POSTGRES_USER: carbonpilot
+      POSTGRES_PASSWORD: carbonpilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - carbonpilot_pgdata:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  backend:
+    build:
+      context: ../apps/backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://carbonpilot:carbonpilot@postgres:5432/carbonpilot
+      LANGSMITH_TRACING: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+volumes:
+  carbonpilot_pgdata:

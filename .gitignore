@@ -1,2 +1,30 @@
 **/.DS_Store
 
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+**/.venv/
+**/*.egg-info/
+**/htmlcov/
+**/.coverage
+
+# Node / frontend
+**/node_modules/
+**/dist/
+**/.vite/
+**/coverage/
+**/*.tsbuildinfo
+
+# Environment and local runtime
+**/.env
+**/.env.local
+**/.env.*.local
+!**/.env.example
+
+# Generated reports and uploads
+**/storage/
+**/tmp/
+**/reports/generated/

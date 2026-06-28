@@ -1,0 +1,1 @@
+"""Memory and checkpointing contracts."""
