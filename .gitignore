@@ -28,3 +28,15 @@
 **/storage/
 **/tmp/
 **/reports/generated/
+
+# Docker Local Caches
+.dockerignore
+**/.docker/
+
+# Windows System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Build and lock files that might generate during manual runs
+*.log
