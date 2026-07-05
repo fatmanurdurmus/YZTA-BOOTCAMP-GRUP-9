@@ -62,6 +62,14 @@ CarbonPilot AI, demir-çelik başta olmak üzere ağır sanayi ihracatçıların
 - ✅ Critic Agent ile halüsinasyon/tutarlılık denetimi
 - 📱 React + Tailwind ile mobil öncelikli karbon risk paneli
 
+
+### İş Model Kanvası
+
+<p align="center">
+  <img src="docs/assets/BM-9.png" alt="İş Model Kanvası" width="100%">
+</p>
+
+
 ### Hedef Kitle
 - Demir-çelik ve ağır sanayi ihracatçıları
 - Çevre mühendisleri ve sürdürülebilirlik direktörleri
