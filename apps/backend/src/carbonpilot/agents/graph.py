@@ -1,4 +1,5 @@
 import json
+import time
 from typing import Any
 
 from carbonpilot.calculation.engine import calculate_emissions
@@ -76,9 +77,7 @@ def build_carbonpilot_graph() -> Any:
     return graph.compile()
 
 
-def run_carbonpilot_graph(request: AgentRunRequest) -> dict[str, Any]:
-    graph = build_carbonpilot_graph()
-
+def _invoke_graph_once(graph: Any, request: AgentRunRequest) -> dict[str, Any]:
     if isinstance(graph, LocalCarbonPilotGraph):
         return graph.invoke({"request": request})
 
@@ -97,3 +96,44 @@ def run_carbonpilot_graph(request: AgentRunRequest) -> dict[str, Any]:
         "critic_passed": critic_passed,
         "messages": result.get("messages", []),
     }
+
+
+def _build_fallback_response(
+    request: AgentRunRequest, last_result: dict[str, Any], reason: str
+) -> dict[str, Any]:
+    return {
+        "thread_id": request.thread_id,
+        "status": "fallback",
+        "calculation": last_result["calculation"],
+        "law_reference_count": last_result["law_reference_count"],
+        "critic_passed": False,
+        "messages": [*last_result["messages"], f"guardrail_fallback: {reason}"],
+    }
+
+
+def run_carbonpilot_graph(request: AgentRunRequest) -> dict[str, Any]:
+    """Runs the graph with CP-20 guardrails.
+
+    - loop limit: at most `request.max_retries` retries after the first attempt
+    - timeout: aborts and falls back once `request.timeout_seconds` is exceeded
+    - fallback: if the critic never passes, returns a 'fallback' status carrying
+      the last known calculation instead of looping forever
+    """
+    graph = build_carbonpilot_graph()
+    start_time = time.monotonic()
+    last_result: dict[str, Any] | None = None
+
+    for _attempt in range(1, request.max_retries + 2):
+        if last_result is not None:
+            elapsed_seconds = time.monotonic() - start_time
+            if elapsed_seconds > request.timeout_seconds:
+                return _build_fallback_response(
+                    request, last_result, f"timeout_exceeded_after_{elapsed_seconds:.1f}s"
+                )
+
+        last_result = _invoke_graph_once(graph, request)
+
+        if last_result["critic_passed"]:
+            return last_result
+
+    return _build_fallback_response(request, last_result, "max_retries_exceeded")
