@@ -13,14 +13,25 @@ services:
 
   backend:
     build:
-      context: ../apps/backend
+      context: .
+      dockerfile: apps/backend/Dockerfile
     environment:
       DATABASE_URL: postgresql+psycopg://carbonpilot:carbonpilot@postgres:5432/carbonpilot
       LANGSMITH_TRACING: "false"
+      PYTHONPATH: "/app"
     ports:
       - "8000:8000"
     depends_on:
       - postgres
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
 
 volumes:
   carbonpilot_pgdata:

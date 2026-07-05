@@ -34,5 +34,11 @@ def run_agent(request: AgentRunRequest) -> AgentRunResponse:
 @router.post("/v1/reports/json")
 def create_json_report(request: CalculationRequest) -> dict[str, object]:
     calculation = calculate_emissions(request)
-    references = retrieve_default_references()
-    return build_json_report(calculation, references)
+    law_references = retrieve_default_references()
+    
+    # Synchronized parameter signatures safely with keyword arguments (CP-11)
+    report_data = build_json_report(
+        calculation=calculation, 
+        law_references=law_references
+    )
+    return report_data
