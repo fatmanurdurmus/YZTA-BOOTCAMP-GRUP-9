@@ -39,17 +39,12 @@ class LocalCarbonPilotGraph:
 
 
 def build_carbonpilot_graph() -> Any:
-    """
-    Builds the production-ready LangGraph StateGraph with autonomous self-correction loops.
-    Falls back to LocalCarbonPilotGraph if LangGraph core libraries are unavailable.
-    """
     try:
         from langgraph.graph import END, StateGraph
         from carbonpilot.agents.state import CarbonPilotState
     except ImportError:
         return LocalCarbonPilotGraph()
 
-    # --- Node Definitions ---
     def law_node(state: CarbonPilotState) -> CarbonPilotState:
         state["law_references"] = retrieve_default_references()
         if "messages" not in state or not state["messages"]:
@@ -60,70 +55,68 @@ def build_carbonpilot_graph() -> Any:
     def calculate_node(state: CarbonPilotState) -> CarbonPilotState:
         payload = state["activity_payload"]
         request = AgentRunRequest.model_validate(payload)
-        
+
         calculation_request = CalculationRequest(
             activity_data=request.activity_data,
             carbon_price_eur_per_tonne=request.carbon_price_eur_per_tonne,
         )
         state["calculation"] = calculate_emissions(calculation_request)
         state["thread_id"] = request.thread_id
-        
+
         if "messages" not in state:
             state["messages"] = []
         state["messages"].append("calculate_emissions completed")
         return state
 
     def critic_node(state: CarbonPilotState) -> CarbonPilotState:
-        if "retries" not in state:
-            state["retries"] = 0
-            
         passed, messages = audit_calculation(state["calculation"], state["law_references"])
         state["critic_passed"] = passed
-        
+
         if "messages" not in state:
             state["messages"] = []
         state["messages"].extend(messages)
+
+        if not passed:
+            state["retries"] = state.get("retries", 0) + 1
+
         return state
 
-    # --- Conditional Router Edge (CP-20 Guardrail Implementation) ---
     def routing_logic(state: CarbonPilotState) -> str:
-        """Evaluates critic outcome and applies self-correction loops or fallback to avoid token loops."""
         if state.get("critic_passed", False):
             return "approved"
-            
+
         current_retries = state.get("retries", 0)
         max_allowed = state.get("max_retries", 2)
-        
-        if current_retries < max_allowed:
-            state["retries"] = current_retries + 1
-            state["messages"].append(f"Critic audit failed. Self-correction loop triggered (Retry {state['retries']}/{max_allowed}).")
+
+        if current_retries <= max_allowed:
+            state["messages"].append(
+                f"Critic audit failed. Self-correction loop triggered (Retry {current_retries}/{max_allowed})."
+            )
             return "retry"
-            
+
         state["messages"].append("Max retries reached without passing critic. Diverting to human_review_required.")
         return "blocked"
 
-    # --- Graph Structural Layout ---
     graph = StateGraph(CarbonPilotState)
-    
+
     graph.add_node("retrieve_law_refs", law_node)
     graph.add_node("calculate_emissions", calculate_node)
     graph.add_node("critic_review", critic_node)
-    
+
     graph.set_entry_point("retrieve_law_refs")
     graph.add_edge("retrieve_law_refs", "calculate_emissions")
     graph.add_edge("calculate_emissions", "critic_review")
-    
-    # Binding conditional logic to the critic outcome
+
     graph.add_conditional_edges(
         "critic_review",
         routing_logic,
         {
             "approved": END,
-            "retry": "calculate_emissions",  
-            "blocked": END                  
-        }
+            "retry": "calculate_emissions",
+            "blocked": END,
+        },
     )
-    
+
     return graph.compile()
 
 
@@ -131,21 +124,20 @@ def _invoke_graph_once(graph: Any, request: AgentRunRequest) -> dict[str, Any]:
     if isinstance(graph, LocalCarbonPilotGraph):
         return graph.invoke({"request": request})
 
-    # Execute inside real runtime graph configuration
     result = graph.invoke(
         {
-            "activity_payload": request.model_dump(mode="json"), 
+            "activity_payload": request.model_dump(mode="json"),
             "max_retries": request.max_retries,
             "retries": 0,
-            "messages": []
+            "messages": [],
         },
-        config={"recursion_limit": max(5, request.max_retries + 5)},
+        config={"recursion_limit": min(500, max(30, 6 * (request.max_retries + 2)))},
     )
-    
+
     calculation = result["calculation"]
     law_references = result["law_references"]
     critic_passed = bool(result["critic_passed"])
-    
+
     return {
         "thread_id": request.thread_id,
         "status": "completed" if critic_passed else "needs_review",
@@ -156,7 +148,7 @@ def _invoke_graph_once(graph: Any, request: AgentRunRequest) -> dict[str, Any]:
             "ingest_document completed",
             "extract_candidate_data skipped: structured input provided",
             "validate_activity_schema completed",
-            *result.get("messages", [])
+            *result.get("messages", []),
         ],
     }
 
@@ -175,28 +167,18 @@ def _build_fallback_response(
 
 
 def run_carbonpilot_graph(request: AgentRunRequest) -> dict[str, Any]:
-    """Runs the graph with CP-20 guardrails.
-
-    - loop limit: at most `request.max_retries` retries after the first attempt
-    - timeout: aborts and falls back once `request.timeout_seconds` is exceeded
-    - fallback: if the critic never passes, returns a 'fallback' status carrying
-      the last known calculation instead of looping forever
-    """
     graph = build_carbonpilot_graph()
     start_time = time.monotonic()
-    last_result: dict[str, Any] | None = None
 
-    for _attempt in range(1, request.max_retries + 2):
-        if last_result is not None:
-            elapsed_seconds = time.monotonic() - start_time
-            if elapsed_seconds > request.timeout_seconds:
-                return _build_fallback_response(
-                    request, last_result, f"timeout_exceeded_after_{elapsed_seconds:.1f}s"
-                )
+    result = _invoke_graph_once(graph, request)
 
-        last_result = _invoke_graph_once(graph, request)
+    elapsed_seconds = time.monotonic() - start_time
+    if elapsed_seconds > request.timeout_seconds:
+        return _build_fallback_response(
+            request, result, f"timeout_exceeded_after_{elapsed_seconds:.1f}s"
+        )
 
-        if last_result["critic_passed"]:
-            return last_result
+    if result["critic_passed"]:
+        return result
 
-    return _build_fallback_response(request, last_result, "max_retries_exceeded")
+    return _build_fallback_response(request, result, "max_retries_exceeded")
