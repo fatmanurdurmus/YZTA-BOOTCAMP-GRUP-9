@@ -1,4 +1,3 @@
-import json
 import time
 from typing import Any
 
@@ -7,6 +6,52 @@ from carbonpilot.critic.service import audit_calculation
 from carbonpilot.law_rag.retriever import retrieve_default_references
 from carbonpilot.schemas.agent import AgentRunRequest
 from carbonpilot.schemas.calculation import CalculationRequest
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+
+_checkpointer: Any = None
+_checkpointer_cm: Any = None
+
+
+def _get_checkpointer() -> Any:
+    """CP-33: attach a PostgresSaver checkpointer so agent state survives
+    past a single process, keyed by thread_id. If the checkpoint package
+    or the database itself is unavailable, this degrades gracefully by
+    returning None, and the graph simply compiles without a checkpointer
+    (identical to the Sprint 1 behaviour).
+    """
+    global _checkpointer, _checkpointer_cm
+    if _checkpointer is not None:
+        return _checkpointer
+
+    try:
+        from langgraph.checkpoint.postgres import PostgresSaver
+
+        from carbonpilot.config import get_settings
+
+        settings = get_settings()
+        conn_string = settings.database_url.replace("postgresql+psycopg://", "postgresql://")
+
+        # IMPORTANT: keep a reference to the context manager itself at
+        # module level, not just the yielded checkpointer. Otherwise the
+        # generator gets garbage-collected as soon as this function
+        # returns, which closes the underlying psycopg connection even
+        # though we're still holding on to the checkpointer object.
+        #
+        # We also pass a custom serde with pickle_fallback=True: our
+        # graph state stores Pydantic models with fields like HttpUrl
+        # (e.g. LawReference) which the default ormsgpack encoder cannot
+        # pack on its own. pickle_fallback lets JsonPlusSerializer fall
+        # back to pickle for any type it doesn't recognize natively.
+        _checkpointer_cm = PostgresSaver.from_conn_string(
+            conn_string,
+            serde=JsonPlusSerializer(pickle_fallback=True),
+        )
+        checkpointer = _checkpointer_cm.__enter__()
+        checkpointer.setup()
+        _checkpointer = checkpointer
+        return _checkpointer
+    except Exception:
+        return None
 
 
 class LocalCarbonPilotGraph:
@@ -117,7 +162,8 @@ def build_carbonpilot_graph() -> Any:
         },
     )
 
-    return graph.compile()
+    checkpointer = _get_checkpointer()
+    return graph.compile(checkpointer=checkpointer)
 
 
 def _invoke_graph_once(graph: Any, request: AgentRunRequest) -> dict[str, Any]:
@@ -131,7 +177,10 @@ def _invoke_graph_once(graph: Any, request: AgentRunRequest) -> dict[str, Any]:
             "retries": 0,
             "messages": [],
         },
-        config={"recursion_limit": min(500, max(30, 6 * (request.max_retries + 2)))},
+        config={
+            "recursion_limit": min(500, max(30, 6 * (request.max_retries + 2))),
+            "configurable": {"thread_id": request.thread_id},
+        },
     )
 
     calculation = result["calculation"]
