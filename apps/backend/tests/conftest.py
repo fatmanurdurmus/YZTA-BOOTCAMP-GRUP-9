@@ -1,5 +1,6 @@
 import pytest
 
+from carbonpilot.agents import graph as graph_module
 from carbonpilot.schemas.activity import (
     ActivityData,
     ElectricityActivity,
@@ -10,6 +11,29 @@ from carbonpilot.schemas.activity import (
     TransportActivity,
 )
 from carbonpilot.schemas.calculation import CalculationRequest
+
+
+@pytest.fixture
+def require_checkpointer():
+    """
+    Fails the test (does NOT skip) if a live Postgres checkpointer isn't
+    available. Use this in any test that specifically verifies
+    persistence/recovery behaviour (CP-34 and later).
+
+    We fail loudly on purpose: `_get_checkpointer()` degrades silently
+    to None when Postgres is unreachable so the *rest* of the app keeps
+    working, but that same silence would let a persistence test report
+    a false "pass" if Docker Postgres isn't running. This project's
+    workflow always starts Postgres first (see README), so a missing
+    checkpointer here means something is actually wrong, not an
+    acceptable fallback.
+    """
+    checkpointer = graph_module._get_checkpointer()
+    assert checkpointer is not None, (
+        "No live Postgres checkpointer available. Start it first: "
+        "docker compose -f infra/docker-compose.yml up -d postgres"
+    )
+    return checkpointer
 
 
 @pytest.fixture

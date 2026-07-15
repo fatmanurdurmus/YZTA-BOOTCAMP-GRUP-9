@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Any
 
@@ -7,6 +8,8 @@ from carbonpilot.law_rag.retriever import retrieve_default_references
 from carbonpilot.schemas.agent import AgentRunRequest
 from carbonpilot.schemas.calculation import CalculationRequest
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+
+logger = logging.getLogger(__name__)
 
 _checkpointer: Any = None
 _checkpointer_cm: Any = None
@@ -36,21 +39,30 @@ def _get_checkpointer() -> Any:
         # generator gets garbage-collected as soon as this function
         # returns, which closes the underlying psycopg connection even
         # though we're still holding on to the checkpointer object.
-        #
-        # We also pass a custom serde with pickle_fallback=True: our
-        # graph state stores Pydantic models with fields like HttpUrl
+        _checkpointer_cm = PostgresSaver.from_conn_string(conn_string)
+        checkpointer = _checkpointer_cm.__enter__()
+
+        # Our graph state stores Pydantic models with fields like HttpUrl
         # (e.g. LawReference) which the default ormsgpack encoder cannot
         # pack on its own. pickle_fallback lets JsonPlusSerializer fall
         # back to pickle for any type it doesn't recognize natively.
-        _checkpointer_cm = PostgresSaver.from_conn_string(
-            conn_string,
-            serde=JsonPlusSerializer(pickle_fallback=True),
-        )
-        checkpointer = _checkpointer_cm.__enter__()
+        #
+        # NOTE: from_conn_string() does NOT accept a `serde` kwarg (it
+        # only takes conn_string/pipeline) -- passing it there raises a
+        # silent TypeError that the except below used to swallow,
+        # leaving checkpointing quietly disabled. `serde` is a plain
+        # instance attribute (see BaseCheckpointSaver.__init__), so we
+        # set it directly on the already-constructed checkpointer.
+        checkpointer.serde = JsonPlusSerializer(pickle_fallback=True)
         checkpointer.setup()
         _checkpointer = checkpointer
         return _checkpointer
     except Exception:
+        logger.warning(
+            "Postgres checkpointer unavailable; agent graph will run "
+            "without persistence (falls back to Sprint 1 behaviour).",
+            exc_info=True,
+        )
         return None
 
 
