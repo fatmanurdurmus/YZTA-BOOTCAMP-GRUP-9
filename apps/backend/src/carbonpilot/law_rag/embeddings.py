@@ -1,10 +1,10 @@
 import hashlib
-import math
 import logging
+import math
 
-logger = logging.getLogger(__name__)
 from carbonpilot.config import get_settings
 
+logger = logging.getLogger(__name__)
 EMBEDDING_DIMENSIONS = 768
 
 
@@ -28,12 +28,6 @@ def _hash_embedding(text: str) -> list[float]:
 
     norm = math.sqrt(sum(component**2 for component in vector)) or 1.0
     return [component / norm for component in vector]
-
-
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def embed_text(text: str) -> list[float]:
     """Returns a normalized embedding vector for `text`.

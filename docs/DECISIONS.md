@@ -23,3 +23,14 @@ Decision: Gemini-first for LLM tasks, but provider adapters should remain possib
 ## 2026-06-28: Observability
 
 Decision: use LangSmith first for tracing and debugging LangGraph runs, behind environment configuration.
+
+## 2026-07-16: Green-Transition Financial Methodology
+
+Decision: green-transition options are evaluated by deterministic decimal arithmetic over a
+configurable annual carbon-tax schedule. Taxable emissions are the non-negative remainder after
+the period's coverage rate and free allowance are applied. Carbon-tax savings are the difference
+between baseline and transitioned carbon costs. Options are ranked by net present savings after
+initial investment and annual operating costs/savings. Legal rates, coverage, allowances, and
+their references are request inputs; the engine does not hard-code or forecast regulation.
+Initial investment is a time-zero cash flow, while each compliance year's net savings is treated
+as an end-of-year cash flow for discounting.

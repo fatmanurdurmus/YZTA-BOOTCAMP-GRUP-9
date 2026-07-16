@@ -10,6 +10,8 @@ from carbonpilot.law_rag.seed import seed_law_chunks
 from carbonpilot.reporting.json_report import build_json_report
 from carbonpilot.schemas.agent import AgentRunRequest, AgentRunResponse
 from carbonpilot.schemas.calculation import CalculationRequest, CalculationResponse
+from carbonpilot.schemas.optimization import OptimizationRequest, OptimizationResponse
+from carbonpilot.simulation.service import optimize_green_transition
 
 router = APIRouter()
 
@@ -22,6 +24,11 @@ def health() -> dict[str, str]:
 @router.post("/v1/calculate", response_model=CalculationResponse)
 def calculate(request: CalculationRequest) -> CalculationResponse:
     return calculate_emissions(request)
+
+
+@router.post("/v1/optimize/green-transition", response_model=OptimizationResponse)
+def optimize_transition(request: OptimizationRequest) -> OptimizationResponse:
+    return optimize_green_transition(request)
 
 
 @router.get("/v1/law-rag/sources")
