@@ -118,3 +118,25 @@ def persist_calculation_run(
     db.commit()
     db.refresh(run)
     return run
+
+def get_episodic_history(
+    db: Session, organization_name: str, facility_name: str, limit: int = 5
+) -> list[models.CalculationRun]:
+    """CP-36: episodic memory — returns the most recent calculation runs for
+    a given organization/facility, most recent first. This lets the agent
+    (or any caller) see what happened in past runs for this facility before
+    reacting to the current one, e.g. "the last 3 runs all failed the
+    critic for the same reason".
+    """
+    return (
+        db.query(models.CalculationRun)
+        .join(models.Facility, models.CalculationRun.facility_id == models.Facility.id)
+        .join(models.Organization, models.Facility.organization_id == models.Organization.id)
+        .filter(
+            models.Organization.name == organization_name,
+            models.Facility.name == facility_name,
+        )
+        .order_by(models.CalculationRun.requested_at.desc())
+        .limit(limit)
+        .all()
+    )
