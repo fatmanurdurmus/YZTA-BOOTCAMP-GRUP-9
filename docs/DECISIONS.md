@@ -34,3 +34,16 @@ initial investment and annual operating costs/savings. Legal rates, coverage, al
 their references are request inputs; the engine does not hard-code or forecast regulation.
 Initial investment is a time-zero cash flow, while each compliance year's net savings is treated
 as an end-of-year cash flow for discounting.
+
+## 2026-07-16: Interactive Transition Slider Methodology
+
+Decision: slider percentages represent the share of a defined energy or material baseline moved
+to a transition lever. A lever's avoided emissions equal its scope baseline multiplied by its
+slider share and its configurable reduction factor. Energy and material baselines are disjoint,
+their allocated total may not exceed the inventory baseline, and shares within either scope may
+not exceed 100%, preventing double counting. Projected emissions are evaluated with the same
+coverage, free-allowance, and carbon-price formula as the optimization engine. Transition costs
+are treated as upfront costs; operating costs and savings recur once per tax-schedule year. ROI
+is undiscounted net savings divided by total transition plus operating cost and is undefined when
+that denominator is zero. Conversion factors, costs, tax assumptions, and source references are
+request inputs rather than hard-coded regulatory or technology claims.

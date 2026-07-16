@@ -11,7 +11,8 @@ from carbonpilot.reporting.json_report import build_json_report
 from carbonpilot.schemas.agent import AgentRunRequest, AgentRunResponse
 from carbonpilot.schemas.calculation import CalculationRequest, CalculationResponse
 from carbonpilot.schemas.optimization import OptimizationRequest, OptimizationResponse
-from carbonpilot.simulation.service import optimize_green_transition
+from carbonpilot.schemas.simulation import SliderSimulationRequest, SliderSimulationResponse
+from carbonpilot.simulation.service import optimize_green_transition, simulate_transition_sliders
 
 router = APIRouter()
 
@@ -29,6 +30,13 @@ def calculate(request: CalculationRequest) -> CalculationResponse:
 @router.post("/v1/optimize/green-transition", response_model=OptimizationResponse)
 def optimize_transition(request: OptimizationRequest) -> OptimizationResponse:
     return optimize_green_transition(request)
+
+
+@router.post("/v1/simulate/transition-slider", response_model=SliderSimulationResponse)
+def simulate_transition_slider(
+    request: SliderSimulationRequest,
+) -> SliderSimulationResponse:
+    return simulate_transition_sliders(request)
 
 
 @router.get("/v1/law-rag/sources")
