@@ -5,7 +5,8 @@ from carbonpilot.agents.graph import run_carbonpilot_graph
 from carbonpilot.calculation.engine import calculate_emissions
 from carbonpilot.db.repository import persist_calculation_run
 from carbonpilot.db.session import get_db
-from carbonpilot.law_rag.retriever import retrieve_default_references
+from carbonpilot.law_rag.retriever import retrieve_default_references, semantic_search
+from carbonpilot.law_rag.seed import seed_law_chunks
 from carbonpilot.reporting.json_report import build_json_report
 from carbonpilot.schemas.agent import AgentRunRequest, AgentRunResponse
 from carbonpilot.schemas.calculation import CalculationRequest, CalculationResponse
@@ -27,6 +28,21 @@ def calculate(request: CalculationRequest) -> CalculationResponse:
 def law_sources() -> dict[str, object]:
     return {"references": [reference.model_dump() for reference in retrieve_default_references()]}
 
+
+@router.post("/v1/law-rag/seed")
+def seed_law_rag(db: Session = Depends(get_db)) -> dict[str, object]:
+    """CP-35: seeds the curated CBAM/SKDM law chunks (with embeddings) into
+    Postgres. Safe to call repeatedly — already-seeded titles are skipped.
+    """
+    inserted = seed_law_chunks(db)
+    return {"inserted": inserted}
+
+
+@router.get("/v1/law-rag/search")
+def search_law_rag(query: str, top_k: int = 3, db: Session = Depends(get_db)) -> dict[str, object]:
+    """CP-35: semantic memory search over indexed CBAM/SKDM law chunks."""
+    references = semantic_search(db, query, top_k=top_k)
+    return {"references": [reference.model_dump() for reference in references]}
 
 @router.post("/v1/agent/run", response_model=AgentRunResponse)
 def run_agent(request: AgentRunRequest, db: Session = Depends(get_db)) -> AgentRunResponse:
