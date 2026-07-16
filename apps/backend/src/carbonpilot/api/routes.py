@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from carbonpilot.agents.graph import run_carbonpilot_graph
 from carbonpilot.calculation.engine import calculate_emissions
-from carbonpilot.db.repository import persist_calculation_run
+from carbonpilot.db.repository import get_episodic_history, persist_calculation_run
 from carbonpilot.db.session import get_db
 from carbonpilot.law_rag.retriever import retrieve_default_references, semantic_search
 from carbonpilot.law_rag.seed import seed_law_chunks
@@ -44,9 +44,48 @@ def search_law_rag(query: str, top_k: int = 3, db: Session = Depends(get_db)) ->
     references = semantic_search(db, query, top_k=top_k)
     return {"references": [reference.model_dump() for reference in references]}
 
+@router.get("/v1/memory/episodic")
+def episodic_memory(
+    organization_name: str, facility_name: str, limit: int = 5, db: Session = Depends(get_db)
+) -> dict[str, object]:
+    """CP-36: episodic memory — recent calculation runs for a facility."""
+    runs = get_episodic_history(db, organization_name, facility_name, limit=limit)
+    return {
+        "runs": [
+            {
+                "thread_id": run.thread_id,
+                "status": run.status,
+                "total_tco2e": float(run.total_tco2e) if run.total_tco2e is not None else None,
+                "critic_passed": run.critic_passed,
+                "requested_at": run.requested_at.isoformat() if run.requested_at else None,
+            }
+            for run in runs
+        ]
+    }
+
+
 @router.post("/v1/agent/run", response_model=AgentRunResponse)
 def run_agent(request: AgentRunRequest, db: Session = Depends(get_db)) -> AgentRunResponse:
     result = run_carbonpilot_graph(request)
+
+    # CP-36: episodic memory recall — look at this facility's past runs
+    # *before* persisting the current one, so "past" never includes itself.
+    # A lookup failure must never break the API response, so it's isolated.
+    try:
+        past_runs = get_episodic_history(
+            db,
+            request.activity_data.facility.organization_name,
+            request.activity_data.facility.facility_name,
+            limit=3,
+        )
+        if past_runs:
+            result["messages"] = [
+                *result.get("messages", []),
+                f"episodic_memory: found {len(past_runs)} prior run(s) for this facility; "
+                f"most recent status={past_runs[0].status}, critic_passed={past_runs[0].critic_passed}",
+            ]
+    except Exception:
+        db.rollback()
 
     # CP-32: persist the outcome so it survives past this single request.
     # A persistence failure must never break the API response the user

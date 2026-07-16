@@ -101,3 +101,31 @@ def build_demo_calculation_request() -> CalculationRequest:
             ],
         ),
     )
+
+@pytest.fixture
+def require_database():
+    """
+    Fails the test (does NOT skip) if a live Postgres connection isn't
+    available. Mirrors `require_checkpointer` (see above) — persistence
+    tests should fail loudly, not silently pass, when Docker Postgres
+    isn't running (see README for `docker compose up -d postgres`).
+
+    Yields a real SQLAlchemy session and rolls back/closes it afterwards.
+    """
+    from sqlalchemy import text
+
+    from carbonpilot.db.session import SessionLocal
+
+    db = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception as exc:
+        db.close()
+        raise AssertionError(
+            "No live Postgres connection available. Start it first: "
+            "docker compose -f infra/docker-compose.yml up -d postgres"
+        ) from exc
+
+    yield db
+    db.rollback()
+    db.close()
