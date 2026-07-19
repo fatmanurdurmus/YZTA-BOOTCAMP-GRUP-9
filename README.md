@@ -215,7 +215,7 @@ Dashboard varsayılan olarak `http://localhost:5173` adresinde açılır.
     <img src="ProjectManagement/Sprint2Documents/backend3.png" width="90%" alt="API şemaları (Swagger)"/>
   </p>
 
-- **Sprint Review:** Sprint 2 kapsamındaki 11 backlog kalemi (CP-29 – CP-39) tamamlandı. PostgreSQL şeması, SQLAlchemy modelleri ve Alembic migration'ları kuruldu; LangGraph self-correction döngüsüne gerçek PostgresSaver checkpointing eklendi ve state recovery testiyle doğrulandı; Law-RAG semantik bellek katmanı gerçek Gemini embedding'leriyle çalışır hale getirildi; epizodik bellek katmanı agent'ın geçmiş çalıştırmaları hatırlamasını sağladı; yeşil dönüşüm optimizasyon motoru ve simülasyon sürgü backend'i tamamlandı; 3 yeni regresyon testiyle Sprint 1'in bozulmadığı kanıtlandı (toplam 51 test, tamamı geçiyor). Sprint Review katılımcıları: Fatma Nur, Onur, Yaren, Senem, Tahsin.
+- **Sprint Review:** Sprint 2 kapsamındaki 10 backlog kalemi (CP-29 – CP-39) tamamlandı. PostgreSQL şeması, SQLAlchemy modelleri ve Alembic migration'ları kuruldu; LangGraph self-correction döngüsüne gerçek PostgresSaver checkpointing eklendi ve state recovery testiyle doğrulandı; Law-RAG semantik bellek katmanı gerçek Gemini embedding'leriyle çalışır hale getirildi; epizodik bellek katmanı agent'ın geçmiş çalıştırmaları hatırlamasını sağladı; yeşil dönüşüm optimizasyon motoru ve simülasyon sürgü backend'i tamamlandı; 3 yeni regresyon testiyle Sprint 1'in bozulmadığı kanıtlandı (toplam 53 test, tamamı geçiyor). Sprint Review katılımcıları: Fatma Nur, Onur, Yaren, Senem, Tahsin.
 
 - **Sprint Retrospective:**
   - LangGraph'ın conditional-edge fonksiyonlarında state mutasyonunun kalıcı olmadığı (sadece node'larda kalıcı olduğu) sancılı ama değerli bir öğrenme oldu.
@@ -415,7 +415,7 @@ The dashboard opens at `http://localhost:5173` by default.
     <img src="ProjectManagement/Sprint2Documents/backend3.png" width="90%" alt="API schemas (Swagger)"/>
   </p>
 
-- **Sprint Review:** All 11 backlog items in Sprint 2 (CP-29 – CP-39) were completed. The PostgreSQL schema, SQLAlchemy models, and Alembic migrations were built; real PostgresSaver checkpointing was added to the LangGraph self-correction loop and verified with a state-recovery test; the Law-RAG semantic memory layer was made to work with real Gemini embeddings; the episodic memory layer let the agent recall past runs; the green-transition optimization engine and simulation slider backend were completed; and 3 new regression tests confirmed Sprint 1 remained intact (51 tests total, all passing). Sprint Review attendees: Fatma Nur, Onur, Yaren, Senem, Tahsin.
+- **Sprint Review:** All 10 backlog items in Sprint 2 (CP-29 – CP-39) were completed. The PostgreSQL schema, SQLAlchemy models, and Alembic migrations were built; real PostgresSaver checkpointing was added to the LangGraph self-correction loop and verified with a state-recovery test; the Law-RAG semantic memory layer was made to work with real Gemini embeddings; the episodic memory layer let the agent recall past runs; the green-transition optimization engine and simulation slider backend were completed; and 3 new regression tests confirmed Sprint 1 remained intact (53 tests total, all passing). Sprint Review attendees: Fatma Nur, Onur, Yaren, Senem, Tahsin.
 
 - **Sprint Retrospective:**
   - Discovering that state mutations inside LangGraph conditional-edge functions don't persist (only node functions do) was a painful but valuable lesson.
