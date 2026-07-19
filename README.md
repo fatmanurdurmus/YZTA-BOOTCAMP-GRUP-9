@@ -30,6 +30,7 @@
 - [Repo Yapısı](#repository-structure)
 - [Kurulum](#kurulum)
 - [Sprint 1](#sprint-1-19-haziran--5-temmuz)
+- [Sprint 2](#sprint-2-6-temmuz--19-temmuz)
 
 ---
 
@@ -58,7 +59,10 @@ CarbonPilot AI, demir-çelik başta olmak üzere ağır sanayi ihracatçıların
 - 🔒 Pydantic ile tip-güvenli veri şemaları (strict JSON)
 - 📊 Deterministik Scope 1, Scope 2 ve CBAM-odaklı Scope 3 hesaplama motoru
 - 🤖 LangGraph tabanlı agent orkestrasyonu (loop limit, timeout ve fallback guardrail'leri ile)
-- 📚 Law-RAG mevzuat referans katmanı
+- 📚 Law-RAG mevzuat referans katmanı (Gemini embedding + pgvector semantik arama)
+- 🧠 Epizodik bellek: agent geçmiş çalıştırmaları tesis bazında hatırlar
+- 🗄️ PostgreSQL + LangGraph PostgresSaver ile kalıcı durum ve checkpointing
+- 🌱 Yeşil dönüşüm optimizasyon motoru ve simülasyon sürgüleri
 - ✅ Critic Agent ile halüsinasyon/tutarlılık denetimi
 - 📱 React + Tailwind ile mobil öncelikli karbon risk paneli
 
@@ -179,11 +183,48 @@ Dashboard varsayılan olarak `http://localhost:5173` adresinde açılır.
 
 ---
 
-# Sprint 2 
+# Sprint 2 (6 Temmuz – 19 Temmuz)
+
+**Sprint Hedefi:** PostgreSQL kalıcılığı, SQLAlchemy/Alembic migration altyapısı, LangGraph PostgresSaver checkpointing, semantik (Gemini + pgvector) ve epizodik bellek katmanları, yeşil dönüşüm optimizasyon motoru ve simülasyon sürgü backend'inin kurulması; Sprint 1'in bozulmadığının regresyon testleriyle kanıtlanması.
+
+- **Backlog düzeni ve Story seçimleri:** Sprint 2 kapsamı (CP-29 – CP-39), bootcamp planlama dokümanındaki "Durum Yönetimi, Çok Katmanlı Bellek ve Simülasyon Motoru" hedefiyle birebir örtüşecek şekilde seçildi: veritabanı şeması ve ORM (CP-29, CP-31), hesaplama motorunun gerçek kalıcılığa bağlanması (CP-32), agent checkpointing ve state recovery (CP-33, CP-34), semantik ve epizodik bellek (CP-35, CP-36), optimizasyon ve simülasyon (CP-37, CP-38), ve son olarak Sprint 1'i doğrulayan regresyon test paketi (CP-39).
+
+- **Daily Scrum:** Daily Scrum toplantıları Slack ve WhatsApp üzerinden yürütülmüştür. Notlar: [Sprint 2 Daily Scrum Notları](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint2Documents/DailyScrumMeetingNotesSprint2.docx?raw=true)
+
+- **Sprint board update:**
+
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/board1.png" width="90%" alt="Sprint 2 board 1"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/board2.png" width="90%" alt="Sprint 2 board 2"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/summary.png" width="90%" alt="Sprint 2 özet"/>
+  </p>
+
+- **Ürün Durumu:**
+
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/backend1.png" width="90%" alt="Backend test çıktısı"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/backend2.png" width="90%" alt="API endpoint listesi (Swagger)"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/backend3.png" width="90%" alt="API şemaları (Swagger)"/>
+  </p>
+
+- **Sprint Review:** Sprint 2 kapsamındaki 11 backlog kalemi (CP-29 – CP-39) tamamlandı. PostgreSQL şeması, SQLAlchemy modelleri ve Alembic migration'ları kuruldu; LangGraph self-correction döngüsüne gerçek PostgresSaver checkpointing eklendi ve state recovery testiyle doğrulandı; Law-RAG semantik bellek katmanı gerçek Gemini embedding'leriyle çalışır hale getirildi; epizodik bellek katmanı agent'ın geçmiş çalıştırmaları hatırlamasını sağladı; yeşil dönüşüm optimizasyon motoru ve simülasyon sürgü backend'i tamamlandı; 3 yeni regresyon testiyle Sprint 1'in bozulmadığı kanıtlandı (toplam 51 test, tamamı geçiyor). Sprint Review katılımcıları: Fatma Nur, Onur, Yaren, Senem, Tahsin.
+
+- **Sprint Retrospective:**
+  - LangGraph'ın conditional-edge fonksiyonlarında state mutasyonunun kalıcı olmadığı (sadece node'larda kalıcı olduğu) sancılı ama değerli bir öğrenme oldu.
+  - Checkpointer serileştirme (msgpack → pickle fallback) ve embedding boyut uyumsuzlukları (1536 vs 768) gibi kütüphane detaylarına daha erken bakılması gerektiği görüldü.
+  - DB gerektiren testlerin "sessizce geç" yerine "yüksek sesle hata ver" prensibiyle yazılması, gerçek altyapı sorunlarını erken yakalamamızı sağladı.
 
 ---
 
-# Sprint 3 
+# Sprint 3
 
 ---
 
@@ -197,6 +238,7 @@ Dashboard varsayılan olarak `http://localhost:5173` adresinde açılır.
 - [Repository Structure](#repository-structure-1)
 - [Setup](#setup)
 - [Sprint 1](#sprint-1-june-19--july-5)
+- [Sprint 2](#sprint-2-july-6--july-19)
 
 ---
 
@@ -225,7 +267,10 @@ CarbonPilot AI is an AI-assisted carbon accounting and decision-support platform
 - 🔒 Type-safe data schemas with Pydantic (strict JSON)
 - 📊 Deterministic Scope 1, Scope 2, and CBAM-focused Scope 3 calculation engine
 - 🤖 LangGraph-based agent orchestration (with loop limit, timeout, and fallback guardrails)
-- 📚 Law-RAG legal reference layer
+- 📚 Law-RAG legal reference layer (Gemini embeddings + pgvector semantic search)
+- 🧠 Episodic memory: the agent recalls past runs per facility
+- 🗄️ PostgreSQL + LangGraph PostgresSaver for durable state and checkpointing
+- 🌱 Green-transition optimization engine and simulation sliders
 - ✅ Critic Agent for hallucination/consistency auditing
 - 📱 Mobile-first carbon risk dashboard built with React + Tailwind
 
@@ -338,8 +383,45 @@ The dashboard opens at `http://localhost:5173` by default.
 
 ---
 
-# Sprint 2 
+# Sprint 2 (July 6 – July 19)
+
+**Sprint Goal:** Establish PostgreSQL persistence, the SQLAlchemy/Alembic migration pipeline, LangGraph PostgresSaver checkpointing, semantic (Gemini + pgvector) and episodic memory layers, the green-transition optimization engine, and the simulation slider backend; prove Sprint 1 remains intact via a dedicated regression suite.
+
+- **Backlog structure and story selection:** Sprint 2 scope (CP-29 – CP-39) mapped directly onto the bootcamp's planned "State Management, Multi-Layer Memory, and Simulation Engine" milestone: database schema and ORM (CP-29, CP-31), wiring the calculation engine to real persistence (CP-32), agent checkpointing and state recovery (CP-33, CP-34), semantic and episodic memory (CP-35, CP-36), optimization and simulation (CP-37, CP-38), and finally a regression suite proving Sprint 1 still holds (CP-39).
+
+- **Daily Scrum:** Daily Scrum meetings were held via Slack and WhatsApp. Notes: [Sprint 2 Daily Scrum Notes](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint2Documents/DailyScrumMeetingNotesSprint2.docx?raw=true)
+
+- **Sprint board update:**
+
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/board1.png" width="90%" alt="Sprint 2 board 1"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/board2.png" width="90%" alt="Sprint 2 board 2"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/summary.png" width="90%" alt="Sprint 2 summary"/>
+  </p>
+
+- **Product Status:**
+
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/backend1.png" width="90%" alt="Backend test output"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/backend2.png" width="90%" alt="API endpoint list (Swagger)"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint2Documents/backend3.png" width="90%" alt="API schemas (Swagger)"/>
+  </p>
+
+- **Sprint Review:** All 11 backlog items in Sprint 2 (CP-29 – CP-39) were completed. The PostgreSQL schema, SQLAlchemy models, and Alembic migrations were built; real PostgresSaver checkpointing was added to the LangGraph self-correction loop and verified with a state-recovery test; the Law-RAG semantic memory layer was made to work with real Gemini embeddings; the episodic memory layer let the agent recall past runs; the green-transition optimization engine and simulation slider backend were completed; and 3 new regression tests confirmed Sprint 1 remained intact (51 tests total, all passing). Sprint Review attendees: Fatma Nur, Onur, Yaren, Senem, Tahsin.
+
+- **Sprint Retrospective:**
+  - Discovering that state mutations inside LangGraph conditional-edge functions don't persist (only node functions do) was a painful but valuable lesson.
+  - Library-level details — checkpointer serialization (msgpack → pickle fallback) and embedding dimension mismatches (1536 vs 768) — should be checked earlier next time.
+  - Writing DB-dependent tests to "fail loudly" instead of "silently pass" helped catch real infrastructure issues early.
 
 ---
 
-# Sprint 3 
+# Sprint 3
