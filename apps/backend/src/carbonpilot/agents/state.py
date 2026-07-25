@@ -12,4 +12,6 @@ class CarbonPilotState(TypedDict, total=False):
     calculation: CalculationResponse
     law_references: list[LawReference]
     critic_passed: bool
+    report: dict[str, object]
+    human_review_required: bool
     messages: list[str]

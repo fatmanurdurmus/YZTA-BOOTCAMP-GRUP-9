@@ -5,6 +5,7 @@ from typing import Any
 from carbonpilot.calculation.engine import calculate_emissions
 from carbonpilot.critic.service import audit_calculation
 from carbonpilot.law_rag.retriever import retrieve_default_references
+from carbonpilot.reporting.json_report import build_json_report
 from carbonpilot.schemas.agent import AgentRunRequest
 from carbonpilot.schemas.calculation import CalculationRequest
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
@@ -92,6 +93,7 @@ class LocalCarbonPilotGraph:
                 "calculate_emissions completed",
                 *critic_messages,
             ],
+            "report": build_json_report(calculation, law_references) if critic_passed else None,
         }
 
 
@@ -101,6 +103,19 @@ def build_carbonpilot_graph() -> Any:
         from carbonpilot.agents.state import CarbonPilotState
     except ImportError:
         return LocalCarbonPilotGraph()
+
+    def ingest_document_node(state: CarbonPilotState) -> CarbonPilotState:
+        state.setdefault("messages", []).append("ingest_document completed")
+        return state
+
+    def extract_node(state: CarbonPilotState) -> CarbonPilotState:
+        state.setdefault("messages", []).append("extract_candidate_data skipped: structured input provided")
+        return state
+
+    def validate_node(state: CarbonPilotState) -> CarbonPilotState:
+        AgentRunRequest.model_validate(state["activity_payload"])
+        state.setdefault("messages", []).append("validate_activity_schema completed")
+        return state
 
     def law_node(state: CarbonPilotState) -> CarbonPilotState:
         state["law_references"] = retrieve_default_references()
@@ -125,6 +140,11 @@ def build_carbonpilot_graph() -> Any:
         state["messages"].append("calculate_emissions completed")
         return state
 
+    def optimization_node(state: CarbonPilotState) -> CarbonPilotState:
+        # Optimization input is intentionally optional in this first agent-run contract.
+        state.setdefault("messages", []).append("optimization skipped: no optimization request")
+        return state
+
     def critic_node(state: CarbonPilotState) -> CarbonPilotState:
         passed, messages = audit_calculation(state["calculation"], state["law_references"])
         state["critic_passed"] = passed
@@ -136,6 +156,16 @@ def build_carbonpilot_graph() -> Any:
         if not passed:
             state["retries"] = state.get("retries", 0) + 1
 
+        return state
+
+    def report_node(state: CarbonPilotState) -> CarbonPilotState:
+        state["report"] = build_json_report(state["calculation"], state["law_references"])
+        state.setdefault("messages", []).append("generate_report completed")
+        return state
+
+    def human_review_node(state: CarbonPilotState) -> CarbonPilotState:
+        state["human_review_required"] = True
+        state.setdefault("messages", []).append("human_review_required")
         return state
 
     def routing_logic(state: CarbonPilotState) -> str:
@@ -156,23 +186,35 @@ def build_carbonpilot_graph() -> Any:
 
     graph = StateGraph(CarbonPilotState)
 
+    graph.add_node("ingest_document", ingest_document_node)
+    graph.add_node("extract_candidate_data", extract_node)
+    graph.add_node("validate_activity_schema", validate_node)
     graph.add_node("retrieve_law_refs", law_node)
-    graph.add_node("calculate_emissions", calculate_node)
+    graph.add_node("calculate_emissions_tool", calculate_node)
+    graph.add_node("optimization", optimization_node)
     graph.add_node("critic_review", critic_node)
+    graph.add_node("generate_report", report_node)
+    graph.add_node("human_review_required", human_review_node)
 
-    graph.set_entry_point("retrieve_law_refs")
-    graph.add_edge("retrieve_law_refs", "calculate_emissions")
-    graph.add_edge("calculate_emissions", "critic_review")
+    graph.set_entry_point("ingest_document")
+    graph.add_edge("ingest_document", "extract_candidate_data")
+    graph.add_edge("extract_candidate_data", "validate_activity_schema")
+    graph.add_edge("validate_activity_schema", "retrieve_law_refs")
+    graph.add_edge("retrieve_law_refs", "calculate_emissions_tool")
+    graph.add_edge("calculate_emissions_tool", "optimization")
+    graph.add_edge("optimization", "critic_review")
 
     graph.add_conditional_edges(
         "critic_review",
         routing_logic,
         {
-            "approved": END,
-            "retry": "calculate_emissions",
-            "blocked": END,
+            "approved": "generate_report",
+            "retry": "calculate_emissions_tool",
+            "blocked": "human_review_required",
         },
     )
+    graph.add_edge("generate_report", END)
+    graph.add_edge("human_review_required", END)
 
     checkpointer = _get_checkpointer()
     return graph.compile(checkpointer=checkpointer)
@@ -206,11 +248,9 @@ def _invoke_graph_once(graph: Any, request: AgentRunRequest) -> dict[str, Any]:
         "law_reference_count": len(law_references),
         "critic_passed": critic_passed,
         "messages": [
-            "ingest_document completed",
-            "extract_candidate_data skipped: structured input provided",
-            "validate_activity_schema completed",
             *result.get("messages", []),
         ],
+        "report": result.get("report"),
     }
 
 
