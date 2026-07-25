@@ -13,7 +13,7 @@ import {
 } from "recharts";
 
 import { StatCard } from "./components/StatCard";
-import { emissionsTrend, scopeData as fallbackScopeData } from "./lib/sampleData";
+import { getHealth } from "./lib/api";
 
 interface ChartDataItem {
   scope: string;
@@ -23,107 +23,23 @@ interface ChartDataItem {
 
 export default function App() {
   const [loading, setLoading] = useState(false);
-  const [emissions, setEmissions] = useState("45.25 tCO2e");
-  const [cbamCost, setCbamCost] = useState("EUR 3,620");
-  const [criticStatus, setCriticStatus] = useState("Passed");
-  const [criticDetail, setCriticDetail] = useState("All lines include source evidence");
-  const [agentTrail, setAgentTrail] = useState<string[]>([
-    "ingest_document completed",
-    "extract_candidate_data skipped: structured input provided",
-    "validate_activity_schema completed",
-    "retrieve_law_refs completed",
-    "calculate_emissions completed"
-  ]);
-  const [chartData, setChartData] = useState<ChartDataItem[]>(
-    fallbackScopeData.map(item => ({ ...item, fill: "#1f8a5b" }))
-  );
+  const [emissions] = useState("No calculation yet");
+  const [cbamCost] = useState("No calculation yet");
+  const [criticStatus, setCriticStatus] = useState("Backend not checked");
+  const [criticDetail, setCriticDetail] = useState("Refresh to verify the CarbonPilot backend");
+  const [agentTrail] = useState<string[]>([]);
+  const [chartData] = useState<ChartDataItem[]>([]);
 
-  const triggerAgentRun = async () => {
+  const checkBackend = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://127.0.0.1:8000/v1/reports/json", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          activity_data: {
-            facility: {
-              organization_name: "Demo Steel Corp",
-              facility_name: "FAC-STEEL-01",
-              country_code: "TR",
-              sector: "iron_steel"
-            },
-            reporting_period: "2026-M05",
-            fuels: [
-              {
-                activity_name: "Doğalgaz Tüketimi",
-                fuel_type: "natural_gas",
-                amount: 85000,
-                unit: "Nm3",
-                emission_factor_kg_co2e_per_unit: 2.1,
-                factor_source: "TÜİK 2024",
-                input_reference: "Fatura-NG-Jan",
-                factor_quality: "national_default"
-              }
-            ],
-            processes: [
-              {
-                activity_name: "Ark Ocağı Eritme",
-                process_type: "eaf_steelmaking",
-                output_tonnes: 1250,
-                emission_factor_tco2e_per_tonne: 0.35,
-                factor_source: "CBAM Default",
-                input_reference: "Üretim Raporu-Q1",
-                factor_quality: "cbam_default"
-              }
-            ],
-            electricity: [
-              {
-                activity_name: "Şebeke Elektriği",
-                electricity_mwh: 450,
-                emission_factor_tco2e_per_mwh: 0.42,
-                factor_source: "TEİAŞ 2024",
-                input_reference: "Fatura-ELEK-Jan",
-                market_based: false,
-                factor_quality: "national_default"
-              }
-            ],
-            purchased_inputs: [],
-            transport: []
-          },
-          carbon_price_eur_per_tonne: 80
-        }),
-      });
-
-      if (!response.ok) throw new Error("Backend validation or endpoint failure");
-      
-      const data = await response.json();
-      
-      const totalTco2e = data.total_emissions ?? 45.25;
-      setEmissions(`${totalTco2e} tCO2e`);
-      setCbamCost(`EUR ${(totalTco2e * 80).toLocaleString()}`);
-      setCriticStatus("Passed");
-      setCriticDetail("All lines include source evidence");
-      
-      setAgentTrail([
-        "ingest_document completed",
-        "validate_activity_schema completed",
-        "retrieve_law_refs completed",
-        "calculate_emissions completed",
-        "critic_review passed (100% verified)"
-      ]);
-
-      if (data.breakdown) {
-        setChartData([
-          { scope: "Scope 1", value: data.breakdown.scope1 || 0, fill: "#1f8a5b" },
-          { scope: "Scope 2", value: data.breakdown.scope2 || 0, fill: "#1f8a5b" },
-          { scope: "Scope 3", value: data.breakdown.scope3 || 0, fill: "#1f8a5b" },
-        ]);
-      }
+      const data = await getHealth();
+      setCriticStatus(data.status === "ok" ? "Backend connected" : "Backend unavailable");
+      setCriticDetail(data.service);
     } catch (error) {
       console.error("Error linking backend pipelines:", error);
-      alert("API Connection or Validation Failed! Check Uvicorn terminal for Pydantic errors.");
+      setCriticStatus("Backend unavailable");
+      setCriticDetail("Start the FastAPI service and retry.");
     } finally {
       setLoading(false);
     }
@@ -143,12 +59,12 @@ export default function App() {
             </div>
           </div>
           <button 
-            onClick={triggerAgentRun}
+            onClick={checkBackend}
             disabled={loading}
             className="inline-flex items-center gap-2 rounded-md bg-carbon-ink px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
           >
             {loading ? <RefreshCw size={17} className="animate-spin" /> : <UploadCloud size={17} />}
-            {loading ? "Running Agent..." : "Trigger Autonomous Agent"}
+            {loading ? "Checking backend..." : "Refresh backend status"}
           </button>
         </div>
       </header>
@@ -180,7 +96,7 @@ export default function App() {
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold text-carbon-ink">Emissions by scope</h2>
-                <p className="text-sm text-slate-500">Demo steel facility, 2026-Q1</p>
+                <p className="text-sm text-slate-500">Results appear after a real API run</p>
               </div>
               <span className="rounded-md border border-carbon-line px-3 py-1 text-sm text-slate-600">
                 Deterministic engine
@@ -204,7 +120,7 @@ export default function App() {
             <p className="text-sm text-slate-500">Baseline vs optimized reduction path</p>
             <div className="mt-5 h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={emissionsTrend}>
+                <AreaChart data={[]}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="month" />
                   <YAxis />
@@ -221,6 +137,7 @@ export default function App() {
           <section className="rounded-lg border border-carbon-line bg-white p-5 shadow-sm">
             <h2 className="text-base font-semibold text-carbon-ink">Agent audit trail</h2>
             <div className="mt-4 space-y-3">
+              {agentTrail.length === 0 && <p className="text-sm text-slate-500">No agent run yet.</p>}
               {agentTrail.map((step, index) => (
                 <div
                   key={index}
@@ -240,15 +157,15 @@ export default function App() {
             <dl className="mt-4 space-y-4 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="text-slate-500">Input references</dt>
-                <dd className="font-semibold text-carbon-ink">5 / 5</dd>
+                <dd className="font-semibold text-carbon-ink">-</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-slate-500">Factor sources</dt>
-                <dd className="font-semibold text-carbon-ink">5 / 5</dd>
+                <dd className="font-semibold text-carbon-ink">-</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-slate-500">Law references</dt>
-                <dd className="font-semibold text-carbon-ink">2</dd>
+                <dd className="font-semibold text-carbon-ink">-</dd>
               </div>
             </dl>
           </section>
