@@ -13,7 +13,7 @@ import {
 } from "recharts";
 
 import { StatCard } from "./components/StatCard";
-import { getHealth } from "./lib/api";
+import { extractDocument, getHealth } from "./lib/api";
 
 interface ChartDataItem {
   scope: string;
@@ -29,6 +29,8 @@ export default function App() {
   const [criticDetail, setCriticDetail] = useState("Refresh to verify the CarbonPilot backend");
   const [agentTrail] = useState<string[]>([]);
   const [chartData] = useState<ChartDataItem[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState("Upload a PDF, DOCX, or XLSX to extract candidate data.");
 
   const checkBackend = async () => {
     setLoading(true);
@@ -40,6 +42,18 @@ export default function App() {
       console.error("Error linking backend pipelines:", error);
       setCriticStatus("Backend unavailable");
       setCriticDetail("Start the FastAPI service and retry.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  const uploadForExtraction = async () => {
+    if (!selectedFile) return;
+    setLoading(true);
+    try {
+      const result = await extractDocument(selectedFile);
+      setUploadStatus(`Candidate data extracted from ${result.source_filename}. Review it before calculation.`);
+    } catch (error) {
+      setUploadStatus(error instanceof Error ? `Extraction failed: ${error.message}` : "Extraction failed.");
     } finally {
       setLoading(false);
     }
@@ -91,6 +105,14 @@ export default function App() {
               icon={<ShieldCheck size={20} aria-hidden="true" />}
             />
           </div>
+
+          <section className="rounded-lg border border-carbon-line bg-white p-5 shadow-sm">
+            <h2 className="text-base font-semibold text-carbon-ink">Document extraction</h2>
+            <p className="mt-1 text-sm text-slate-500">Files are sent directly to the strict Extractor Agent endpoint.</p>
+            <input aria-label="Document to extract" className="mt-3 block w-full text-sm" type="file" accept=".pdf,.docx,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} />
+            <button type="button" disabled={!selectedFile || loading} onClick={uploadForExtraction} className="mt-3 rounded-md bg-carbon-green px-3 py-2 text-sm font-medium text-white disabled:opacity-50">Extract candidate data</button>
+            <p className="mt-3 text-sm text-slate-600">{uploadStatus}</p>
+          </section>
 
           <section className="rounded-lg border border-carbon-line bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
