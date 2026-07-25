@@ -7,6 +7,8 @@ from carbonpilot.db.repository import get_episodic_history, persist_calculation_
 from carbonpilot.db.session import get_db
 from carbonpilot.law_rag.retriever import retrieve_default_references, semantic_search
 from carbonpilot.law_rag.seed import seed_law_chunks
+from carbonpilot.law_rag.documents import ingest_law_document
+from carbonpilot.ingestion.documents import SUPPORTED_LAW_TYPES
 from carbonpilot.reporting.json_report import build_json_report
 from carbonpilot.ingestion.documents import SUPPORTED_ACTIVITY_TYPES, UnsupportedDocumentType, extract_document_text
 from carbonpilot.ingestion.extractor import ExtractionRejected, ProviderUnavailable, extract_candidate_activity
@@ -17,6 +19,7 @@ from carbonpilot.schemas.optimization import OptimizationRequest, OptimizationRe
 from carbonpilot.schemas.simulation import SliderSimulationRequest, SliderSimulationResponse
 from carbonpilot.schemas.extraction import ExtractionResponse
 from carbonpilot.simulation.service import optimize_green_transition, simulate_transition_sliders
+from carbonpilot.config import get_settings
 
 router = APIRouter()
 
@@ -88,9 +91,33 @@ def seed_law_rag(db: Session = Depends(get_db)) -> dict[str, object]:
     return {"inserted": inserted}
 
 
+@router.post("/v1/law-rag/documents")
+async def upload_law_document(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    jurisdiction: str = Form(...),
+    source_url: str = Form(...),
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    if file.content_type not in SUPPORTED_LAW_TYPES:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Supported types: PDF, TXT, DOCX")
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Maximum file size is 10 MiB")
+    try:
+        document_id, chunk_count = ingest_law_document(db=db, content=content, content_type=file.content_type or "", filename=file.filename or "upload", title=title, jurisdiction=jurisdiction, source_url=source_url)
+    except ProviderUnavailable as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    except UnsupportedDocumentType as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    return {"document_id": document_id, "chunk_count": chunk_count}
+
+
 @router.get("/v1/law-rag/search")
 def search_law_rag(query: str, top_k: int = 3, db: Session = Depends(get_db)) -> dict[str, object]:
     """CP-35: semantic memory search over indexed CBAM/SKDM law chunks."""
+    if not get_settings().gemini_api_key:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GEMINI_API_KEY is required for real Law-RAG search")
     references = semantic_search(db, query, top_k=top_k)
     return {"references": [reference.model_dump() for reference in references]}
 

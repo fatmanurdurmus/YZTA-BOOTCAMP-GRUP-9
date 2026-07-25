@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from carbonpilot.db import models
 from carbonpilot.law_rag.embeddings import embed_text
-from carbonpilot.schemas.law import LawReference
+from carbonpilot.schemas.law import LawReference, SourceLocator
 
 def retrieve_default_references() -> list[LawReference]:
     return [
@@ -52,6 +52,17 @@ def semantic_search(db: Session, query: str, top_k: int = 3) -> list[LawReferenc
             url=row.source_url,
             relevance=row.chunk_text[:200],
             source_type="indexed_law_chunk",
+            source_locator=(
+                SourceLocator(
+                    document_id=str(row.law_document_id),
+                    page_start=row.page_start,
+                    page_end=row.page_end,
+                    paragraph_start=row.paragraph_start,
+                    paragraph_end=row.paragraph_end,
+                )
+                if row.law_document_id
+                else None
+            ),
         )
         for row in rows
     ]

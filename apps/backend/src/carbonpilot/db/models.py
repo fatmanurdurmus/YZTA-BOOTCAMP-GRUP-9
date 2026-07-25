@@ -56,10 +56,29 @@ class LawChunk(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(Text, nullable=False)
+    law_document_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("law_documents.id"), nullable=True)
     jurisdiction: Mapped[str] = mapped_column(Text, nullable=False)
     source_url: Mapped[str] = mapped_column(Text, nullable=False)
     chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
+    page_start: Mapped[int] = mapped_column(nullable=False, default=1)
+    page_end: Mapped[int] = mapped_column(nullable=False, default=1)
+    paragraph_start: Mapped[int] = mapped_column(nullable=False, default=1)
+    paragraph_end: Mapped[int] = mapped_column(nullable=False, default=1)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
+
+
+class LawDocument(Base):
+    __tablename__ = "law_documents"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    jurisdiction: Mapped[str] = mapped_column(Text, nullable=False)
+    source_url: Mapped[str] = mapped_column(Text, nullable=False)
+    file_name: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default="now()")
+
+    chunks: Mapped[list["LawChunk"]] = relationship()
 
 
 class Document(Base):
