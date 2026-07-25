@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     langsmith_project: str = "carbonpilot-ai"
     gemini_api_key: str | None = None
     jwt_secret: str = "change-me-local-only"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60
 
 
 @lru_cache
