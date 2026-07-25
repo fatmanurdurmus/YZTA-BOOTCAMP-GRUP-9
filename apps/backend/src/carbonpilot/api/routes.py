@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from carbonpilot.agents.graph import run_carbonpilot_graph
@@ -8,13 +8,19 @@ from carbonpilot.db.session import get_db
 from carbonpilot.law_rag.retriever import retrieve_default_references, semantic_search
 from carbonpilot.law_rag.seed import seed_law_chunks
 from carbonpilot.reporting.json_report import build_json_report
+from carbonpilot.ingestion.documents import SUPPORTED_ACTIVITY_TYPES, UnsupportedDocumentType, extract_document_text
+from carbonpilot.ingestion.extractor import ExtractionRejected, ProviderUnavailable, extract_candidate_activity
+from carbonpilot.schemas.activity import Facility
 from carbonpilot.schemas.agent import AgentRunRequest, AgentRunResponse
 from carbonpilot.schemas.calculation import CalculationRequest, CalculationResponse
 from carbonpilot.schemas.optimization import OptimizationRequest, OptimizationResponse
 from carbonpilot.schemas.simulation import SliderSimulationRequest, SliderSimulationResponse
+from carbonpilot.schemas.extraction import ExtractionResponse
 from carbonpilot.simulation.service import optimize_green_transition, simulate_transition_sliders
 
 router = APIRouter()
+
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
 @router.get("/health")
@@ -25,6 +31,35 @@ def health() -> dict[str, str]:
 @router.post("/v1/calculate", response_model=CalculationResponse)
 def calculate(request: CalculationRequest) -> CalculationResponse:
     return calculate_emissions(request)
+
+
+@router.post("/v1/documents/extract", response_model=ExtractionResponse)
+async def extract_document(
+    file: UploadFile = File(...),
+    organization_name: str = Form(...),
+    facility_name: str = Form(...),
+    country_code: str = Form(...),
+    reporting_period: str = Form(...),
+) -> ExtractionResponse:
+    """Extract a strict *candidate* only; it is never persisted or calculated here."""
+    if file.content_type not in SUPPORTED_ACTIVITY_TYPES:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Supported types: PDF, DOCX, XLSX")
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Maximum file size is 10 MiB")
+    try:
+        pages = extract_document_text(content, file.content_type or "", file.filename or "upload")
+        candidate = extract_candidate_activity(
+            document_text="\n\n".join(f"[page {page}]\n{text}" for page, text in pages),
+            filename=file.filename or "upload",
+            facility=Facility(organization_name=organization_name, facility_name=facility_name, country_code=country_code),
+            reporting_period=reporting_period,
+        )
+    except ProviderUnavailable as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+    except (UnsupportedDocumentType, ExtractionRejected) as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    return ExtractionResponse(candidate_activity_data=candidate, source_filename=file.filename or "upload")
 
 
 @router.post("/v1/optimize/green-transition", response_model=OptimizationResponse)

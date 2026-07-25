@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     environment: str = "local"
     database_url: str = "postgresql+psycopg://carbonpilot:carbonpilot@localhost:5432/carbonpilot"
     langsmith_tracing: bool = False
+    langsmith_api_key: str | None = None
+    langsmith_project: str = "carbonpilot-ai"
     gemini_api_key: str | None = None
     jwt_secret: str = "change-me-local-only"
 
