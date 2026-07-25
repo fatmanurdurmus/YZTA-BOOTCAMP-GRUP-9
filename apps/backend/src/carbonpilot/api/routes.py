@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from carbonpilot.agents.graph import run_carbonpilot_graph
@@ -10,6 +10,7 @@ from carbonpilot.law_rag.seed import seed_law_chunks
 from carbonpilot.law_rag.documents import ingest_law_document
 from carbonpilot.ingestion.documents import SUPPORTED_LAW_TYPES
 from carbonpilot.reporting.json_report import build_json_report
+from carbonpilot.reporting.pdf_report import build_pdf_report
 from carbonpilot.ingestion.documents import SUPPORTED_ACTIVITY_TYPES, UnsupportedDocumentType, extract_document_text
 from carbonpilot.ingestion.extractor import ExtractionRejected, ProviderUnavailable, extract_candidate_activity
 from carbonpilot.schemas.activity import Facility
@@ -196,3 +197,10 @@ def create_json_report(request: CalculationRequest) -> dict[str, object]:
         law_references=law_references
     )
     return report_data
+
+
+@router.post("/v1/reports/pdf")
+def create_pdf_report(request: CalculationRequest) -> Response:
+    calculation = calculate_emissions(request)
+    content = build_pdf_report(calculation, retrieve_default_references())
+    return Response(content=content, media_type="application/pdf", headers={"Content-Disposition": 'attachment; filename="carbonpilot-cbam-report.pdf"'})
