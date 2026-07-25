@@ -8,7 +8,9 @@ describe("App", () => {
     render(<App />);
 
     expect(screen.getByText("CarbonPilot AI")).toBeInTheDocument();
-    expect(screen.getByText("45.25 tCO2e")).toBeInTheDocument();
+    expect(screen.getAllByText("No calculation yet")).toHaveLength(2);
     expect(screen.getByText("Agent audit trail")).toBeInTheDocument();
+    expect(screen.getByLabelText("Document to extract")).toBeInTheDocument();
+    expect(screen.getByLabelText("Solar transition")).toBeInTheDocument();
   });
 });

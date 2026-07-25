@@ -20,6 +20,9 @@ def test_agent_graph_runs_with_structured_input(build_demo_calculation_request):
     assert response["critic_passed"] is True
     assert response["calculation"].total_tco2e == 45.25
     assert response["law_reference_count"] >= 1
+    assert response["report"] is not None
+    assert "ingest_document completed" in response["messages"]
+    assert "optimization skipped: no optimization request" in response["messages"]
 
 
 def test_agent_graph_trigger_self_correction_loop(build_demo_calculation_request):

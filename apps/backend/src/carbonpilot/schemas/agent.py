@@ -20,3 +20,4 @@ class AgentRunResponse(StrictBaseModel):
     law_reference_count: int
     critic_passed: bool
     messages: list[str]
+    report: dict[str, object] | None = None

@@ -13,7 +13,7 @@ import {
 } from "recharts";
 
 import { StatCard } from "./components/StatCard";
-import { emissionsTrend, scopeData as fallbackScopeData } from "./lib/sampleData";
+import { extractDocument, getHealth, simulateTransitionSliders } from "./lib/api";
 
 interface ChartDataItem {
   scope: string;
@@ -23,110 +23,54 @@ interface ChartDataItem {
 
 export default function App() {
   const [loading, setLoading] = useState(false);
-  const [emissions, setEmissions] = useState("45.25 tCO2e");
-  const [cbamCost, setCbamCost] = useState("EUR 3,620");
-  const [criticStatus, setCriticStatus] = useState("Passed");
-  const [criticDetail, setCriticDetail] = useState("All lines include source evidence");
-  const [agentTrail, setAgentTrail] = useState<string[]>([
-    "ingest_document completed",
-    "extract_candidate_data skipped: structured input provided",
-    "validate_activity_schema completed",
-    "retrieve_law_refs completed",
-    "calculate_emissions completed"
-  ]);
-  const [chartData, setChartData] = useState<ChartDataItem[]>(
-    fallbackScopeData.map(item => ({ ...item, fill: "#1f8a5b" }))
-  );
+  const [emissions] = useState("No calculation yet");
+  const [cbamCost] = useState("No calculation yet");
+  const [criticStatus, setCriticStatus] = useState("Backend not checked");
+  const [criticDetail, setCriticDetail] = useState("Refresh to verify the CarbonPilot backend");
+  const [agentTrail] = useState<string[]>([]);
+  const [chartData] = useState<ChartDataItem[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState("Upload a PDF, DOCX, or XLSX to extract candidate data.");
+  const [baseline, setBaseline] = useState("0");
+  const [solarPercent, setSolarPercent] = useState(0);
+  const [simulationStatus, setSimulationStatus] = useState("Enter a real baseline to simulate a transition scenario.");
 
-  const triggerAgentRun = async () => {
+  const checkBackend = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://127.0.0.1:8000/v1/reports/json", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          activity_data: {
-            facility: {
-              organization_name: "Demo Steel Corp",
-              facility_name: "FAC-STEEL-01",
-              country_code: "TR",
-              sector: "iron_steel"
-            },
-            reporting_period: "2026-M05",
-            fuels: [
-              {
-                activity_name: "Doğalgaz Tüketimi",
-                fuel_type: "natural_gas",
-                amount: 85000,
-                unit: "Nm3",
-                emission_factor_kg_co2e_per_unit: 2.1,
-                factor_source: "TÜİK 2024",
-                input_reference: "Fatura-NG-Jan",
-                factor_quality: "national_default"
-              }
-            ],
-            processes: [
-              {
-                activity_name: "Ark Ocağı Eritme",
-                process_type: "eaf_steelmaking",
-                output_tonnes: 1250,
-                emission_factor_tco2e_per_tonne: 0.35,
-                factor_source: "CBAM Default",
-                input_reference: "Üretim Raporu-Q1",
-                factor_quality: "cbam_default"
-              }
-            ],
-            electricity: [
-              {
-                activity_name: "Şebeke Elektriği",
-                electricity_mwh: 450,
-                emission_factor_tco2e_per_mwh: 0.42,
-                factor_source: "TEİAŞ 2024",
-                input_reference: "Fatura-ELEK-Jan",
-                market_based: false,
-                factor_quality: "national_default"
-              }
-            ],
-            purchased_inputs: [],
-            transport: []
-          },
-          carbon_price_eur_per_tonne: 80
-        }),
-      });
-
-      if (!response.ok) throw new Error("Backend validation or endpoint failure");
-      
-      const data = await response.json();
-      
-      const totalTco2e = data.total_emissions ?? 45.25;
-      setEmissions(`${totalTco2e} tCO2e`);
-      setCbamCost(`EUR ${(totalTco2e * 80).toLocaleString()}`);
-      setCriticStatus("Passed");
-      setCriticDetail("All lines include source evidence");
-      
-      setAgentTrail([
-        "ingest_document completed",
-        "validate_activity_schema completed",
-        "retrieve_law_refs completed",
-        "calculate_emissions completed",
-        "critic_review passed (100% verified)"
-      ]);
-
-      if (data.breakdown) {
-        setChartData([
-          { scope: "Scope 1", value: data.breakdown.scope1 || 0, fill: "#1f8a5b" },
-          { scope: "Scope 2", value: data.breakdown.scope2 || 0, fill: "#1f8a5b" },
-          { scope: "Scope 3", value: data.breakdown.scope3 || 0, fill: "#1f8a5b" },
-        ]);
-      }
+      const data = await getHealth();
+      setCriticStatus(data.status === "ok" ? "Backend connected" : "Backend unavailable");
+      setCriticDetail(data.service);
     } catch (error) {
       console.error("Error linking backend pipelines:", error);
-      alert("API Connection or Validation Failed! Check Uvicorn terminal for Pydantic errors.");
+      setCriticStatus("Backend unavailable");
+      setCriticDetail("Start the FastAPI service and retry.");
     } finally {
       setLoading(false);
     }
+  };
+  const uploadForExtraction = async () => {
+    if (!selectedFile) return;
+    setLoading(true);
+    try {
+      const result = await extractDocument(selectedFile);
+      setUploadStatus(`Candidate data extracted from ${result.source_filename}. Review it before calculation.`);
+    } catch (error) {
+      setUploadStatus(error instanceof Error ? `Extraction failed: ${error.message}` : "Extraction failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  const runSliderSimulation = async () => {
+    if (Number(baseline) <= 0) return;
+    setLoading(true);
+    const assumptions = { emission_reduction_factor: "0.20", transition_cost_eur_at_100_percent: "0", annual_operating_cost_eur_at_100_percent: "0", annual_operating_savings_eur_at_100_percent: "0", factor_source: "User-provided assumption", input_reference: "Dashboard input" };
+    try {
+      const result = await simulateTransitionSliders({ baseline_tco2e: baseline, baseline_energy_tco2e: baseline, baseline_material_tco2e: "0", baseline_input_reference: "Dashboard baseline", energy_mix: { solar_percent: String(solarPercent), wind_percent: "0" }, material_substitution: { recycled_percent: "0", low_carbon_percent: "0" }, solar_assumptions: assumptions, wind_assumptions: assumptions, recycled_material_assumptions: assumptions, low_carbon_material_assumptions: assumptions, tax_schedule: [{ year: 2026, carbon_price_eur_per_tco2e: "80", covered_emissions_rate: "1", free_allowance_tco2e: "0", tax_rate_source: "User-provided assumption", input_reference: "Dashboard input" }] });
+      setSimulationStatus(`Projected emissions: ${String(result.projected_emissions_tco2e)} tCO2e; reduction: ${String(result.emissions_reduction_tco2e)} tCO2e.`);
+    } catch (error) {
+      setSimulationStatus(error instanceof Error ? `Simulation failed: ${error.message}` : "Simulation failed.");
+    } finally { setLoading(false); }
   };
 
   return (
@@ -143,12 +87,12 @@ export default function App() {
             </div>
           </div>
           <button 
-            onClick={triggerAgentRun}
+            onClick={checkBackend}
             disabled={loading}
             className="inline-flex items-center gap-2 rounded-md bg-carbon-ink px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
           >
             {loading ? <RefreshCw size={17} className="animate-spin" /> : <UploadCloud size={17} />}
-            {loading ? "Running Agent..." : "Trigger Autonomous Agent"}
+            {loading ? "Checking backend..." : "Refresh backend status"}
           </button>
         </div>
       </header>
@@ -177,10 +121,26 @@ export default function App() {
           </div>
 
           <section className="rounded-lg border border-carbon-line bg-white p-5 shadow-sm">
+            <h2 className="text-base font-semibold text-carbon-ink">Optimization sliders</h2>
+            <label className="mt-3 block text-sm text-slate-600">Baseline emissions (tCO2e)<input aria-label="Baseline emissions" className="mt-1 block w-full rounded border p-2" type="number" min="0" value={baseline} onChange={(event) => setBaseline(event.target.value)} /></label>
+            <label className="mt-3 block text-sm text-slate-600">Solar transition: {solarPercent}%<input aria-label="Solar transition" className="mt-1 block w-full" type="range" min="0" max="100" value={solarPercent} onChange={(event) => setSolarPercent(Number(event.target.value))} /></label>
+            <button type="button" disabled={loading || Number(baseline) <= 0} onClick={runSliderSimulation} className="mt-3 rounded-md bg-carbon-green px-3 py-2 text-sm font-medium text-white disabled:opacity-50">Run real simulation</button>
+            <p className="mt-3 text-sm text-slate-600">{simulationStatus}</p>
+          </section>
+
+          <section className="rounded-lg border border-carbon-line bg-white p-5 shadow-sm">
+            <h2 className="text-base font-semibold text-carbon-ink">Document extraction</h2>
+            <p className="mt-1 text-sm text-slate-500">Files are sent directly to the strict Extractor Agent endpoint.</p>
+            <input aria-label="Document to extract" className="mt-3 block w-full text-sm" type="file" accept=".pdf,.docx,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} />
+            <button type="button" disabled={!selectedFile || loading} onClick={uploadForExtraction} className="mt-3 rounded-md bg-carbon-green px-3 py-2 text-sm font-medium text-white disabled:opacity-50">Extract candidate data</button>
+            <p className="mt-3 text-sm text-slate-600">{uploadStatus}</p>
+          </section>
+
+          <section className="rounded-lg border border-carbon-line bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold text-carbon-ink">Emissions by scope</h2>
-                <p className="text-sm text-slate-500">Demo steel facility, 2026-Q1</p>
+                <p className="text-sm text-slate-500">Results appear after a real API run</p>
               </div>
               <span className="rounded-md border border-carbon-line px-3 py-1 text-sm text-slate-600">
                 Deterministic engine
@@ -204,7 +164,7 @@ export default function App() {
             <p className="text-sm text-slate-500">Baseline vs optimized reduction path</p>
             <div className="mt-5 h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={emissionsTrend}>
+                <AreaChart data={[]}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="month" />
                   <YAxis />
@@ -221,6 +181,7 @@ export default function App() {
           <section className="rounded-lg border border-carbon-line bg-white p-5 shadow-sm">
             <h2 className="text-base font-semibold text-carbon-ink">Agent audit trail</h2>
             <div className="mt-4 space-y-3">
+              {agentTrail.length === 0 && <p className="text-sm text-slate-500">No agent run yet.</p>}
               {agentTrail.map((step, index) => (
                 <div
                   key={index}
@@ -240,15 +201,15 @@ export default function App() {
             <dl className="mt-4 space-y-4 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="text-slate-500">Input references</dt>
-                <dd className="font-semibold text-carbon-ink">5 / 5</dd>
+                <dd className="font-semibold text-carbon-ink">-</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-slate-500">Factor sources</dt>
-                <dd className="font-semibold text-carbon-ink">5 / 5</dd>
+                <dd className="font-semibold text-carbon-ink">-</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-slate-500">Law references</dt>
-                <dd className="font-semibold text-carbon-ink">2</dd>
+                <dd className="font-semibold text-carbon-ink">-</dd>
               </div>
             </dl>
           </section>

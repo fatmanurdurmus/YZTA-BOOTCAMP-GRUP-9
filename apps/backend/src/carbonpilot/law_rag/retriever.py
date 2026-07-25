@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from carbonpilot.db import models
 from carbonpilot.law_rag.embeddings import embed_text
-from carbonpilot.schemas.law import LawReference
+from carbonpilot.schemas.law import LawReference, SourceLocator
 
 def retrieve_default_references() -> list[LawReference]:
     return [
@@ -23,7 +23,9 @@ def retrieve_default_references() -> list[LawReference]:
         ),
     ]
 
-def semantic_search(db: Session, query: str, top_k: int = 3) -> list[LawReference]:
+def semantic_search(
+    db: Session, query: str, top_k: int = 3, *, require_provider: bool = False
+) -> list[LawReference]:
     """CP-35: real pgvector-backed semantic search over the indexed CBAM/SKDM
     law chunks in the `law_chunks` table (seeded via `law_rag.seed`).
 
@@ -32,7 +34,7 @@ def semantic_search(db: Session, query: str, top_k: int = 3) -> list[LawReferenc
     `retrieve_default_references()` on their own terms.
     """
     try:
-        query_embedding = embed_text(query)
+        query_embedding = embed_text(query, require_provider=require_provider)
         rows = (
             db.execute(
                 select(models.LawChunk)
@@ -42,6 +44,8 @@ def semantic_search(db: Session, query: str, top_k: int = 3) -> list[LawReferenc
             .scalars()
             .all()
         )
+    except RuntimeError:
+        raise
     except Exception:
         return []
 
@@ -52,6 +56,17 @@ def semantic_search(db: Session, query: str, top_k: int = 3) -> list[LawReferenc
             url=row.source_url,
             relevance=row.chunk_text[:200],
             source_type="indexed_law_chunk",
+            source_locator=(
+                SourceLocator(
+                    document_id=str(row.law_document_id),
+                    page_start=row.page_start,
+                    page_end=row.page_end,
+                    paragraph_start=row.paragraph_start,
+                    paragraph_end=row.paragraph_end,
+                )
+                if row.law_document_id
+                else None
+            ),
         )
         for row in rows
     ]
