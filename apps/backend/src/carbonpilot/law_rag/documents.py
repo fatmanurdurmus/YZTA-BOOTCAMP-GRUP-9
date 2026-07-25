@@ -41,7 +41,11 @@ def ingest_law_document(*, db: Session, content: bytes, content_type: str, filen
     db.flush()
     pages = extract_document_text(content, content_type, filename)
     chunks = chunk_pages(pages)
-    for chunk in chunks:
-        db.add(models.LawChunk(law_document_id=document.id, title=title, jurisdiction=jurisdiction, source_url=source_url, chunk_text=str(chunk["text"]), embedding=embed_text(str(chunk["text"])), page_start=int(chunk["page_start"]), page_end=int(chunk["page_end"]), paragraph_start=int(chunk["paragraph_start"]), paragraph_end=int(chunk["paragraph_end"])))
+    try:
+        for chunk in chunks:
+            db.add(models.LawChunk(law_document_id=document.id, title=title, jurisdiction=jurisdiction, source_url=source_url, chunk_text=str(chunk["text"]), embedding=embed_text(str(chunk["text"]), require_provider=True), page_start=int(chunk["page_start"]), page_end=int(chunk["page_end"]), paragraph_start=int(chunk["paragraph_start"]), paragraph_end=int(chunk["paragraph_end"])))
+    except RuntimeError as exc:
+        db.rollback()
+        raise ProviderUnavailable(str(exc)) from exc
     db.commit()
     return str(document.id), len(chunks)

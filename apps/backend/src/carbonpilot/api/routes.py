@@ -118,7 +118,10 @@ def search_law_rag(query: str, top_k: int = 3, db: Session = Depends(get_db)) ->
     """CP-35: semantic memory search over indexed CBAM/SKDM law chunks."""
     if not get_settings().gemini_api_key:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GEMINI_API_KEY is required for real Law-RAG search")
-    references = semantic_search(db, query, top_k=top_k)
+    try:
+        references = semantic_search(db, query, top_k=top_k, require_provider=True)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     return {"references": [reference.model_dump() for reference in references]}
 
 @router.get("/v1/memory/episodic")

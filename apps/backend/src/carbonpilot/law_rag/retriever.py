@@ -23,7 +23,9 @@ def retrieve_default_references() -> list[LawReference]:
         ),
     ]
 
-def semantic_search(db: Session, query: str, top_k: int = 3) -> list[LawReference]:
+def semantic_search(
+    db: Session, query: str, top_k: int = 3, *, require_provider: bool = False
+) -> list[LawReference]:
     """CP-35: real pgvector-backed semantic search over the indexed CBAM/SKDM
     law chunks in the `law_chunks` table (seeded via `law_rag.seed`).
 
@@ -32,7 +34,7 @@ def semantic_search(db: Session, query: str, top_k: int = 3) -> list[LawReferenc
     `retrieve_default_references()` on their own terms.
     """
     try:
-        query_embedding = embed_text(query)
+        query_embedding = embed_text(query, require_provider=require_provider)
         rows = (
             db.execute(
                 select(models.LawChunk)
@@ -42,6 +44,8 @@ def semantic_search(db: Session, query: str, top_k: int = 3) -> list[LawReferenc
             .scalars()
             .all()
         )
+    except RuntimeError:
+        raise
     except Exception:
         return []
 

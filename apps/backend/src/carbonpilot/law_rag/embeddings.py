@@ -29,7 +29,7 @@ def _hash_embedding(text: str) -> list[float]:
     norm = math.sqrt(sum(component**2 for component in vector)) or 1.0
     return [component / norm for component in vector]
 
-def embed_text(text: str) -> list[float]:
+def embed_text(text: str, *, require_provider: bool = False) -> list[float]:
     """Returns a normalized embedding vector for `text`.
 
     Uses Gemini's embedding API when GEMINI_API_KEY is configured;
@@ -62,9 +62,13 @@ def embed_text(text: str) -> list[float]:
                 len(embedding),
                 EMBEDDING_DIMENSIONS,
             )
-        except Exception:
+        except Exception as exc:
             logger.warning("Gemini embedding call failed; falling back to local embedding.", exc_info=True)
+            if require_provider:
+                raise RuntimeError("Gemini embedding service is unavailable") from exc
     else:
         logger.warning("GEMINI_API_KEY not set; using local fallback embedding.")
+        if require_provider:
+            raise RuntimeError("GEMINI_API_KEY is required for real semantic search")
 
     return _hash_embedding(text)

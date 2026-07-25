@@ -6,6 +6,7 @@ from carbonpilot.calculation.engine import calculate_emissions
 from carbonpilot.critic.service import audit_calculation
 from carbonpilot.law_rag.retriever import retrieve_default_references
 from carbonpilot.reporting.json_report import build_json_report
+from carbonpilot.observability import trace_operation
 from carbonpilot.schemas.agent import AgentRunRequest
 from carbonpilot.schemas.calculation import CalculationRequest
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
@@ -184,17 +185,24 @@ def build_carbonpilot_graph() -> Any:
         state["messages"].append("Max retries reached without passing critic. Diverting to human_review_required.")
         return "blocked"
 
+    def traced_node(name: str, handler: Any) -> Any:
+        def wrapped(state: CarbonPilotState) -> CarbonPilotState:
+            with trace_operation(name, thread_id=state.get("thread_id"), retries=state.get("retries")):
+                return handler(state)
+
+        return wrapped
+
     graph = StateGraph(CarbonPilotState)
 
-    graph.add_node("ingest_document", ingest_document_node)
-    graph.add_node("extract_candidate_data", extract_node)
-    graph.add_node("validate_activity_schema", validate_node)
-    graph.add_node("retrieve_law_refs", law_node)
-    graph.add_node("calculate_emissions_tool", calculate_node)
-    graph.add_node("optimization", optimization_node)
-    graph.add_node("critic_review", critic_node)
-    graph.add_node("generate_report", report_node)
-    graph.add_node("human_review_required", human_review_node)
+    graph.add_node("ingest_document", traced_node("ingest_document", ingest_document_node))
+    graph.add_node("extract_candidate_data", traced_node("extract_candidate_data", extract_node))
+    graph.add_node("validate_activity_schema", traced_node("validate_activity_schema", validate_node))
+    graph.add_node("retrieve_law_refs", traced_node("retrieve_law_refs", law_node))
+    graph.add_node("calculate_emissions_tool", traced_node("calculate_emissions_tool", calculate_node))
+    graph.add_node("optimization", traced_node("optimization", optimization_node))
+    graph.add_node("critic_review", traced_node("critic_review", critic_node))
+    graph.add_node("generate_report", traced_node("generate_report", report_node))
+    graph.add_node("human_review_required", traced_node("human_review_required", human_review_node))
 
     graph.set_entry_point("ingest_document")
     graph.add_edge("ingest_document", "extract_candidate_data")
@@ -268,10 +276,10 @@ def _build_fallback_response(
 
 
 def run_carbonpilot_graph(request: AgentRunRequest) -> dict[str, Any]:
-    graph = build_carbonpilot_graph()
-    start_time = time.monotonic()
-
-    result = _invoke_graph_once(graph, request)
+    with trace_operation("carbonpilot_agent_run", thread_id=request.thread_id, retries=0):
+        graph = build_carbonpilot_graph()
+        start_time = time.monotonic()
+        result = _invoke_graph_once(graph, request)
 
     elapsed_seconds = time.monotonic() - start_time
     if elapsed_seconds > request.timeout_seconds:

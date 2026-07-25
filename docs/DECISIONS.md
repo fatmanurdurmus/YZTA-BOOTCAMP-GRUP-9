@@ -47,3 +47,11 @@ are treated as upfront costs; operating costs and savings recur once per tax-sch
 is undiscounted net savings divided by total transition plus operating cost and is undefined when
 that denominator is zero. Conversion factors, costs, tax assumptions, and source references are
 request inputs rather than hard-coded regulatory or technology claims.
+
+## 2026-07-25: Sprint 3 Evidence and Observability Boundaries
+
+Decision: document extraction is Gemini-assisted but returns only strict, non-persisted candidate
+activity data; deterministic calculations remain a separate explicit action. Uploaded law sources
+retain searchable chunks and page/paragraph evidence, not original binary files. Production Law-RAG
+operations require Gemini embeddings and fail explicitly when unavailable. LangSmith tracing is
+opt-in and records only operational metadata, never raw document or activity payloads.
