@@ -1,26 +1,33 @@
+from datetime import timedelta
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from carbonpilot.agents.graph import run_carbonpilot_graph
+from carbonpilot.auth.dependencies import AuthenticatedUser, get_current_user
+from carbonpilot.auth.security import TokenRequest, TokenResponse, create_access_token
 from carbonpilot.calculation.engine import calculate_emissions
+from carbonpilot.config import get_settings
 from carbonpilot.db.repository import get_episodic_history, persist_calculation_run
 from carbonpilot.db.session import get_db
+from carbonpilot.ingestion.documents import (
+    SUPPORTED_ACTIVITY_TYPES,
+    SUPPORTED_LAW_TYPES,
+    UnsupportedDocumentType,
+    extract_document_text,
+)
+from carbonpilot.ingestion.extractor import ExtractionRejected, ProviderUnavailable, extract_candidate_activity
+from carbonpilot.law_rag.documents import ingest_law_document
 from carbonpilot.law_rag.retriever import retrieve_default_references, semantic_search
 from carbonpilot.law_rag.seed import seed_law_chunks
-from carbonpilot.law_rag.documents import ingest_law_document
-from carbonpilot.ingestion.documents import SUPPORTED_LAW_TYPES
 from carbonpilot.reporting.json_report import build_json_report
 from carbonpilot.reporting.pdf_report import build_pdf_report
-from carbonpilot.ingestion.documents import SUPPORTED_ACTIVITY_TYPES, UnsupportedDocumentType, extract_document_text
-from carbonpilot.ingestion.extractor import ExtractionRejected, ProviderUnavailable, extract_candidate_activity
 from carbonpilot.schemas.activity import Facility
 from carbonpilot.schemas.agent import AgentRunRequest, AgentRunResponse
 from carbonpilot.schemas.calculation import CalculationRequest, CalculationResponse
+from carbonpilot.schemas.extraction import ExtractionResponse
 from carbonpilot.schemas.optimization import OptimizationRequest, OptimizationResponse
 from carbonpilot.schemas.simulation import SliderSimulationRequest, SliderSimulationResponse
-from carbonpilot.schemas.extraction import ExtractionResponse
 from carbonpilot.simulation.service import optimize_green_transition, simulate_transition_sliders
-from carbonpilot.config import get_settings
 
 router = APIRouter()
 
@@ -32,8 +39,27 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "carbonpilot-api"}
 
 
+@router.post("/v1/auth/token", response_model=TokenResponse)
+def generate_token(request: TokenRequest) -> TokenResponse:
+    """CP-50: Generate a JWT access token containing org_id, user_id, and facility_id."""
+    settings = get_settings()
+    token = create_access_token(
+        user_id=request.user_id,
+        organization_id=request.organization_id,
+        facility_id=request.facility_id,
+    )
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in_seconds=settings.jwt_expire_minutes * 60,
+    )
+
+
 @router.post("/v1/calculate", response_model=CalculationResponse)
-def calculate(request: CalculationRequest) -> CalculationResponse:
+def calculate(
+    request: CalculationRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> CalculationResponse:
     return calculate_emissions(request)
 
 
@@ -44,19 +70,26 @@ async def extract_document(
     facility_name: str = Form(...),
     country_code: str = Form(...),
     reporting_period: str = Form(...),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> ExtractionResponse:
     """Extract a strict *candidate* only; it is never persisted or calculated here."""
     if file.content_type not in SUPPORTED_ACTIVITY_TYPES:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Supported types: PDF, DOCX, XLSX")
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Supported types: PDF, DOCX, XLSX"
+        )
     content = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(content) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Maximum file size is 10 MiB")
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Maximum file size is 10 MiB"
+        )
     try:
         pages = extract_document_text(content, file.content_type or "", file.filename or "upload")
         candidate = extract_candidate_activity(
             document_text="\n\n".join(f"[page {page}]\n{text}" for page, text in pages),
             filename=file.filename or "upload",
-            facility=Facility(organization_name=organization_name, facility_name=facility_name, country_code=country_code),
+            facility=Facility(
+                organization_name=organization_name, facility_name=facility_name, country_code=country_code
+            ),
             reporting_period=reporting_period,
         )
     except ProviderUnavailable as exc:
@@ -85,9 +118,6 @@ def law_sources() -> dict[str, object]:
 
 @router.post("/v1/law-rag/seed")
 def seed_law_rag(db: Session = Depends(get_db)) -> dict[str, object]:
-    """CP-35: seeds the curated CBAM/SKDM law chunks (with embeddings) into
-    Postgres. Safe to call repeatedly — already-seeded titles are skipped.
-    """
     inserted = seed_law_chunks(db)
     return {"inserted": inserted}
 
@@ -101,12 +131,24 @@ async def upload_law_document(
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     if file.content_type not in SUPPORTED_LAW_TYPES:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Supported types: PDF, TXT, DOCX")
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Supported types: PDF, TXT, DOCX"
+        )
     content = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(content) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Maximum file size is 10 MiB")
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Maximum file size is 10 MiB"
+        )
     try:
-        document_id, chunk_count = ingest_law_document(db=db, content=content, content_type=file.content_type or "", filename=file.filename or "upload", title=title, jurisdiction=jurisdiction, source_url=source_url)
+        document_id, chunk_count = ingest_law_document(
+            db=db,
+            content=content,
+            content_type=file.content_type or "",
+            filename=file.filename or "upload",
+            title=title,
+            jurisdiction=jurisdiction,
+            source_url=source_url,
+        )
     except ProviderUnavailable as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     except UnsupportedDocumentType as exc:
@@ -116,20 +158,26 @@ async def upload_law_document(
 
 @router.get("/v1/law-rag/search")
 def search_law_rag(query: str, top_k: int = 3, db: Session = Depends(get_db)) -> dict[str, object]:
-    """CP-35: semantic memory search over indexed CBAM/SKDM law chunks."""
     if not get_settings().gemini_api_key:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="GEMINI_API_KEY is required for real Law-RAG search")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="GEMINI_API_KEY is required for real Law-RAG search",
+        )
     try:
         references = semantic_search(db, query, top_k=top_k, require_provider=True)
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     return {"references": [reference.model_dump() for reference in references]}
 
+
 @router.get("/v1/memory/episodic")
 def episodic_memory(
-    organization_name: str, facility_name: str, limit: int = 5, db: Session = Depends(get_db)
+    organization_name: str,
+    facility_name: str,
+    limit: int = 5,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> dict[str, object]:
-    """CP-36: episodic memory — recent calculation runs for a facility."""
     runs = get_episodic_history(db, organization_name, facility_name, limit=limit)
     return {
         "runs": [
@@ -146,12 +194,13 @@ def episodic_memory(
 
 
 @router.post("/v1/agent/run", response_model=AgentRunResponse)
-def run_agent(request: AgentRunRequest, db: Session = Depends(get_db)) -> AgentRunResponse:
+def run_agent(
+    request: AgentRunRequest,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> AgentRunResponse:
     result = run_carbonpilot_graph(request)
 
-    # CP-36: episodic memory recall — look at this facility's past runs
-    # *before* persisting the current one, so "past" never includes itself.
-    # A lookup failure must never break the API response, so it's isolated.
     try:
         past_runs = get_episodic_history(
             db,
@@ -168,9 +217,6 @@ def run_agent(request: AgentRunRequest, db: Session = Depends(get_db)) -> AgentR
     except Exception:
         db.rollback()
 
-    # CP-32: persist the outcome so it survives past this single request.
-    # A persistence failure must never break the API response the user
-    # already computed correctly, so it is isolated in its own try/except.
     try:
         persist_calculation_run(
             db=db,
@@ -187,20 +233,24 @@ def run_agent(request: AgentRunRequest, db: Session = Depends(get_db)) -> AgentR
 
 
 @router.post("/v1/reports/json")
-def create_json_report(request: CalculationRequest) -> dict[str, object]:
+def create_json_report(
+    request: CalculationRequest, current_user: AuthenticatedUser = Depends(get_current_user)
+) -> dict[str, object]:
     calculation = calculate_emissions(request)
     law_references = retrieve_default_references()
 
-    # Synchronized parameter signatures safely with keyword arguments (CP-11)
-    report_data = build_json_report(
-        calculation=calculation,
-        law_references=law_references
-    )
+    report_data = build_json_report(calculation=calculation, law_references=law_references)
     return report_data
 
 
 @router.post("/v1/reports/pdf")
-def create_pdf_report(request: CalculationRequest) -> Response:
+def create_pdf_report(
+    request: CalculationRequest, current_user: AuthenticatedUser = Depends(get_current_user)
+) -> Response:
     calculation = calculate_emissions(request)
     content = build_pdf_report(calculation, retrieve_default_references())
-    return Response(content=content, media_type="application/pdf", headers={"Content-Disposition": 'attachment; filename="carbonpilot-cbam-report.pdf"'})
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="carbonpilot-cbam-report.pdf"'},
+    )
