@@ -13,7 +13,7 @@ import {
 } from "recharts";
 
 import { StatCard } from "./components/StatCard";
-import { extractDocument, getHealth } from "./lib/api";
+import { extractDocument, getHealth, simulateTransitionSliders } from "./lib/api";
 
 interface ChartDataItem {
   scope: string;
@@ -31,6 +31,9 @@ export default function App() {
   const [chartData] = useState<ChartDataItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState("Upload a PDF, DOCX, or XLSX to extract candidate data.");
+  const [baseline, setBaseline] = useState("0");
+  const [solarPercent, setSolarPercent] = useState(0);
+  const [simulationStatus, setSimulationStatus] = useState("Enter a real baseline to simulate a transition scenario.");
 
   const checkBackend = async () => {
     setLoading(true);
@@ -57,6 +60,17 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+  const runSliderSimulation = async () => {
+    if (Number(baseline) <= 0) return;
+    setLoading(true);
+    const assumptions = { emission_reduction_factor: "0.20", transition_cost_eur_at_100_percent: "0", annual_operating_cost_eur_at_100_percent: "0", annual_operating_savings_eur_at_100_percent: "0", factor_source: "User-provided assumption", input_reference: "Dashboard input" };
+    try {
+      const result = await simulateTransitionSliders({ baseline_tco2e: baseline, baseline_energy_tco2e: baseline, baseline_material_tco2e: "0", baseline_input_reference: "Dashboard baseline", energy_mix: { solar_percent: String(solarPercent), wind_percent: "0" }, material_substitution: { recycled_percent: "0", low_carbon_percent: "0" }, solar_assumptions: assumptions, wind_assumptions: assumptions, recycled_material_assumptions: assumptions, low_carbon_material_assumptions: assumptions, tax_schedule: [{ year: 2026, carbon_price_eur_per_tco2e: "80", covered_emissions_rate: "1", free_allowance_tco2e: "0", tax_rate_source: "User-provided assumption", input_reference: "Dashboard input" }] });
+      setSimulationStatus(`Projected emissions: ${String(result.projected_emissions_tco2e)} tCO2e; reduction: ${String(result.emissions_reduction_tco2e)} tCO2e.`);
+    } catch (error) {
+      setSimulationStatus(error instanceof Error ? `Simulation failed: ${error.message}` : "Simulation failed.");
+    } finally { setLoading(false); }
   };
 
   return (
@@ -105,6 +119,14 @@ export default function App() {
               icon={<ShieldCheck size={20} aria-hidden="true" />}
             />
           </div>
+
+          <section className="rounded-lg border border-carbon-line bg-white p-5 shadow-sm">
+            <h2 className="text-base font-semibold text-carbon-ink">Optimization sliders</h2>
+            <label className="mt-3 block text-sm text-slate-600">Baseline emissions (tCO2e)<input aria-label="Baseline emissions" className="mt-1 block w-full rounded border p-2" type="number" min="0" value={baseline} onChange={(event) => setBaseline(event.target.value)} /></label>
+            <label className="mt-3 block text-sm text-slate-600">Solar transition: {solarPercent}%<input aria-label="Solar transition" className="mt-1 block w-full" type="range" min="0" max="100" value={solarPercent} onChange={(event) => setSolarPercent(Number(event.target.value))} /></label>
+            <button type="button" disabled={loading || Number(baseline) <= 0} onClick={runSliderSimulation} className="mt-3 rounded-md bg-carbon-green px-3 py-2 text-sm font-medium text-white disabled:opacity-50">Run real simulation</button>
+            <p className="mt-3 text-sm text-slate-600">{simulationStatus}</p>
+          </section>
 
           <section className="rounded-lg border border-carbon-line bg-white p-5 shadow-sm">
             <h2 className="text-base font-semibold text-carbon-ink">Document extraction</h2>

@@ -55,3 +55,10 @@ activity data; deterministic calculations remain a separate explicit action. Upl
 retain searchable chunks and page/paragraph evidence, not original binary files. Production Law-RAG
 operations require Gemini embeddings and fail explicitly when unavailable. LangSmith tracing is
 opt-in and records only operational metadata, never raw document or activity payloads.
+
+## 2026-07-25: Downloadable Reports and Live Dashboard Inputs
+
+Decision: JSON reports use canonical SHA-256 integrity envelopes so consumers can detect
+post-generation changes. PDF reports retain calculation-line evidence and legal references.
+The dashboard no longer renders fabricated calculation results: document extraction and transition
+slider simulation use the corresponding backend APIs and display provider/API failures explicitly.

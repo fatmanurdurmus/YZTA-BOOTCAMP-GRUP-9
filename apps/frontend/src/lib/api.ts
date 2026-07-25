@@ -21,3 +21,9 @@ export async function extractDocument(file: File): Promise<ExtractionResponse> {
   if (!response.ok) throw new Error(await response.text());
   return response.json() as Promise<ExtractionResponse>;
 }
+
+export async function simulateTransitionSliders(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const response = await fetch(`${API_BASE_URL}/v1/simulate/transition-slider`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json() as Promise<Record<string, unknown>>;
+}
