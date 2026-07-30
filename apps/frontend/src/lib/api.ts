@@ -19,6 +19,37 @@ export interface CarbonRiskHotspot {
   recommendation: string;
 }
 
+// CP-50 protects several endpoints (e.g. /v1/documents/extract) with JWT.
+// There is no login screen yet, so until CP-49/50's UI work adds one, the
+// dashboard authenticates as a fixed demo identity and caches the token in
+// memory for the lifetime of the page. Swap this out once real user login
+// exists — nothing else in this file needs to change, only getDemoToken().
+let cachedDemoToken: string | null = null;
+
+async function getDemoToken(): Promise<string> {
+  if (cachedDemoToken) return cachedDemoToken;
+
+  const response = await fetch(`${API_BASE_URL}/v1/auth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: "demo-user",
+      organization_id: "demo-org",
+      facility_id: "demo-facility",
+    }),
+  });
+  if (!response.ok) throw new Error("Unable to obtain a demo access token");
+
+  const data = (await response.json()) as { access_token: string };
+  cachedDemoToken = data.access_token;
+  return cachedDemoToken;
+}
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const token = await getDemoToken();
+  return { Authorization: `Bearer ${token}` };
+}
+
 export async function getHealth(): Promise<HealthResponse> {
   const response = await fetch(`${API_BASE_URL}/health`);
   if (!response.ok) throw new Error("CarbonPilot API is unavailable");
@@ -32,7 +63,11 @@ export async function extractDocument(file: File): Promise<ExtractionResponse> {
   form.append("facility_name", "Uploaded facility");
   form.append("country_code", "TR");
   form.append("reporting_period", "2026-Q1");
-  const response = await fetch(`${API_BASE_URL}/v1/documents/extract`, { method: "POST", body: form });
+  const response = await fetch(`${API_BASE_URL}/v1/documents/extract`, {
+    method: "POST",
+    headers: await authHeaders(),
+    body: form,
+  });
   if (!response.ok) throw new Error(await response.text());
   return response.json() as Promise<ExtractionResponse>;
 }

@@ -1,8 +1,19 @@
 from fastapi.testclient import TestClient
 
+from carbonpilot.auth.security import create_access_token
 from carbonpilot.ingestion import extractor
 from carbonpilot.main import create_app
 from carbonpilot.schemas.activity import ActivityData, FuelActivity
+
+
+def _auth_headers() -> dict[str, str]:
+    """CP-50 protected this endpoint after these tests were written; every
+    request through TestClient now needs a valid bearer token.
+    """
+    token = create_access_token(
+        user_id="test-user", organization_id="test-org", facility_id="test-facility"
+    )
+    return {"Authorization": f"Bearer {token}"}
 
 
 def _form_data():
@@ -18,7 +29,12 @@ def _candidate() -> ActivityData:
 
 
 def test_extract_rejects_unsupported_document_type():
-    response = TestClient(create_app()).post("/v1/documents/extract", data=_form_data(), files={"file": ("data.csv", b"x", "text/csv")})
+    response = TestClient(create_app()).post(
+        "/v1/documents/extract",
+        data=_form_data(),
+        files={"file": ("data.csv", b"x", "text/csv")},
+        headers=_auth_headers(),
+    )
     assert response.status_code == 415
 
 
@@ -27,7 +43,12 @@ def test_extract_returns_503_without_gemini(monkeypatch):
 
     monkeypatch.setattr(extractor, "get_settings", lambda: type("Settings", (), {"gemini_api_key": None})())
     monkeypatch.setattr(routes, "extract_document_text", lambda *args: [(1, "Natural gas 1 Nm3")])
-    response = TestClient(create_app()).post("/v1/documents/extract", data=_form_data(), files={"file": ("source.pdf", b"not-a-real-pdf", "application/pdf")})
+    response = TestClient(create_app()).post(
+        "/v1/documents/extract",
+        data=_form_data(),
+        files={"file": ("source.pdf", b"not-a-real-pdf", "application/pdf")},
+        headers=_auth_headers(),
+    )
     assert response.status_code == 503
 
 
@@ -36,6 +57,11 @@ def test_extract_returns_strict_candidate_without_persistence(monkeypatch):
 
     monkeypatch.setattr(routes, "extract_document_text", lambda *args: [(1, "Natural gas 1 Nm3")])
     monkeypatch.setattr(routes, "extract_candidate_activity", lambda **kwargs: _candidate())
-    response = TestClient(create_app()).post("/v1/documents/extract", data=_form_data(), files={"file": ("invoice.pdf", b"pdf", "application/pdf")})
+    response = TestClient(create_app()).post(
+        "/v1/documents/extract",
+        data=_form_data(),
+        files={"file": ("invoice.pdf", b"pdf", "application/pdf")},
+        headers=_auth_headers(),
+    )
     assert response.status_code == 200
     assert response.json()["candidate_activity_data"]["fuels"][0]["input_reference"] == "invoice.pdf:p1"
