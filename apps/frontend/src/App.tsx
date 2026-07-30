@@ -26,6 +26,8 @@ import {
 import { StatCard } from "./components/StatCard";
 import { 
   CarbonRiskHotspot, 
+  calculateEmissions,
+  downloadPdfReport,
   extractDocument, 
   getHealth, 
   simulateTransitionSliders 
@@ -47,6 +49,9 @@ export default function App() {
   const [chartData] = useState<ChartDataItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState("Upload a PDF, DOCX, or XLSX to extract candidate data.");
+  const [candidateActivityData, setCandidateActivityData] = useState<Record<string, unknown> | null>(null);
+  const [calculationResult, setCalculationResult] = useState<Record<string, unknown> | null>(null);
+  const [calculationStatus, setCalculationStatus] = useState("Extract a document, then calculate its emissions.");
   const [baseline, setBaseline] = useState("0");
   const [solarPercent, setSolarPercent] = useState(0);
   const [simulationStatus, setSimulationStatus] = useState("Enter a real baseline to simulate a transition scenario.");
@@ -94,14 +99,52 @@ export default function App() {
     }
   };
 
-  const uploadForExtraction = async () => {
+const uploadForExtraction = async () => {
     if (!selectedFile) return;
     setLoading(true);
     try {
       const result = await extractDocument(selectedFile);
+      setCandidateActivityData(result.candidate_activity_data);
+      setCalculationResult(null);
+      setCalculationStatus("Candidate data ready. Click \"Calculate emissions\" to run the engine.");
       setUploadStatus(`Candidate data extracted from ${result.source_filename}. Review it before calculation.`);
     } catch (error) {
       setUploadStatus(error instanceof Error ? `Extraction failed: ${error.message}` : "Extraction failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateFromCandidate = async () => {
+    if (!candidateActivityData) return;
+    setLoading(true);
+    try {
+      const result = await calculateEmissions(candidateActivityData);
+      setCalculationResult(result);
+      setCalculationStatus(`Calculated ${String(result.total_tco2e)} tCO2e for ${String(result.facility_name)}.`);
+    } catch (error) {
+      setCalculationStatus(error instanceof Error ? `Calculation failed: ${error.message}` : "Calculation failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadReport = async () => {
+    if (!candidateActivityData) return;
+    setLoading(true);
+    try {
+      const blob = await downloadPdfReport(candidateActivityData);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "carbonpilot-cbam-report.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setCalculationStatus("PDF report downloaded.");
+    } catch (error) {
+      setCalculationStatus(error instanceof Error ? `Report download failed: ${error.message}` : "Report download failed.");
     } finally {
       setLoading(false);
     }
@@ -342,6 +385,25 @@ export default function App() {
               Extract candidate data
             </button>
             <p className="mt-3 text-xs sm:text-sm text-slate-600">{uploadStatus}</p>
+            <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row">
+              <button
+                type="button"
+                disabled={!candidateActivityData || loading}
+                onClick={calculateFromCandidate}
+                className="w-full rounded-md bg-carbon-ink px-3 py-2 text-sm font-medium text-white sm:w-auto disabled:opacity-50 hover:bg-slate-800 transition-colors"
+              >
+                Calculate emissions
+              </button>
+              <button
+                type="button"
+                disabled={!calculationResult || loading}
+                onClick={downloadReport}
+                className="w-full rounded-md border border-carbon-green px-3 py-2 text-sm font-medium text-carbon-green sm:w-auto disabled:opacity-50 hover:bg-emerald-50 transition-colors"
+              >
+                Download PDF report
+              </button>
+            </div>
+            <p className="mt-3 text-xs sm:text-sm text-slate-600">{calculationStatus}</p>
           </section>
 
           {/* Emissions by scope chart */}

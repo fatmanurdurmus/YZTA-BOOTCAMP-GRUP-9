@@ -72,6 +72,28 @@ export async function extractDocument(file: File): Promise<ExtractionResponse> {
   return response.json() as Promise<ExtractionResponse>;
 }
 
+export async function calculateEmissions(
+  activityData: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const response = await fetch(`${API_BASE_URL}/v1/calculate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+    body: JSON.stringify({ activity_data: activityData, carbon_price_eur_per_tonne: 80 }),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json() as Promise<Record<string, unknown>>;
+}
+
+export async function downloadPdfReport(activityData: Record<string, unknown>): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/v1/reports/pdf`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+    body: JSON.stringify({ activity_data: activityData, carbon_price_eur_per_tonne: 80 }),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return response.blob();
+}
+
 export async function simulateTransitionSliders(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
   const response = await fetch(`${API_BASE_URL}/v1/simulate/transition-slider`, { 
     method: "POST", 
