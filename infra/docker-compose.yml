@@ -1,33 +1,56 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: carbonpilot
-      POSTGRES_USER: carbonpilot
-      POSTGRES_PASSWORD: carbonpilot
+      POSTGRES_DB: ${POSTGRES_DB:-carbonpilot}
+      POSTGRES_USER: ${POSTGRES_USER:-carbonpilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-carbonpilot}
     ports:
       - "5432:5432"
     volumes:
       - carbonpilot_pgdata:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-carbonpilot} -d ${POSTGRES_DB:-carbonpilot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   backend:
     build:
-      context: .
+      context: ..
       dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg://carbonpilot:carbonpilot@postgres:5432/carbonpilot
-      LANGSMITH_TRACING: "false"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-carbonpilot}:${POSTGRES_PASSWORD:-carbonpilot}@postgres:5432/${POSTGRES_DB:-carbonpilot}
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-carbonpilot-ai}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-change-me-local-only}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-60}
       PYTHONPATH: "/app"
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend:
     build:
-      context: .
+      context: ..
       dockerfile: apps/frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    restart: unless-stopped
     ports:
       - "5173:80"
     depends_on:
