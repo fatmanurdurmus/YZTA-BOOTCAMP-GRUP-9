@@ -23,6 +23,8 @@ import {
   YAxis
 } from "recharts";
 
+import { LandingScreen } from "./components/LandingScreen";
+
 import { StatCard } from "./components/StatCard";
 import { 
   CarbonRiskHotspot, 
@@ -33,6 +35,7 @@ import {
   simulateTransitionSliders 
 } from "./lib/api";
 
+
 interface ChartDataItem {
   scope: string;
   value: number;
@@ -40,6 +43,7 @@ interface ChartDataItem {
 }
 
 export default function App() {
+  const [showLanding, setShowLanding] = useState(true);
   const [loading, setLoading] = useState(false);
   const [emissions] = useState("No calculation yet");
   const [cbamCost] = useState("No calculation yet");
@@ -204,6 +208,10 @@ const uploadForExtraction = async () => {
         return "bg-slate-100 text-slate-800 border-slate-300";
     }
   };
+  
+  if (showLanding) {
+    return <LandingScreen onEnter={() => setShowLanding(false)} />;
+  }
 
   return (
     <main className="min-h-screen bg-[#f2f6f3]">
