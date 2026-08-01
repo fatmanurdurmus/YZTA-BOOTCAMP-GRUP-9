@@ -13,7 +13,7 @@ export default defineConfig({
     command: "npm run dev",
     url: "http://localhost:5173",
     reuseExistingServer: true, // Açık olan sunucuyu doğrudan kullanmasını zorunlu kıldık
-    timeout: 120_000, // Zaman aşımını 120 saniyeye çıkardık
+    timeout: 120 * 1000, // Zaman aşımını 120 saniyeye çıkardık
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

@@ -92,6 +92,12 @@ test.describe("CP-52: upload -> calculate -> download report workflow", () => {
     page,
   }) => {
     await page.goto("/");
+    
+    // Landing screen butonunu esnek regex ile bulup tıkla
+    const enterButton = page.getByRole("button", { name: /panele git/i });
+    if (await enterButton.isVisible()) {
+      await enterButton.click();
+    }
 
     await page.setInputFiles('input[aria-label="Document to extract"]', {
       name: "invoice.pdf",
