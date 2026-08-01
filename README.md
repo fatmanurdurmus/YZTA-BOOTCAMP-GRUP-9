@@ -14,6 +14,10 @@
 <p align="center"><i>CBAM/SKDM uyumluluğu için yapay zeka destekli karbon muhasebesi platformu</i></p>
 
 <p align="center">
+  🌐 Canlı Demo: <i>yakında eklenecek</i> • 🎬 Demo Videosu: <i>yakında eklenecek</i>
+</p>
+
+<p align="center">
   <a href="#-türkçe">🇹🇷 Türkçe</a> •
   <a href="#-english">🇬🇧 English</a>
 </p>
@@ -31,6 +35,7 @@
 - [Kurulum](#kurulum)
 - [Sprint 1](#sprint-1-19-haziran--5-temmuz)
 - [Sprint 2](#sprint-2-6-temmuz--19-temmuz)
+- [Sprint 3](#sprint-3-20-temmuz--2-ağustos)
 
 ---
 
@@ -73,6 +78,8 @@ CarbonPilot AI, demir-çelik başta olmak üzere ağır sanayi ihracatçıların
   <img src="docs/assets/BM-9.png" alt="İş Model Kanvası" width="100%">
 </p>
 
+### Fizibilite Raporu
+Pazar analizi, rekabet değerlendirmesi ve risk analizi içeren detaylı fizibilite raporumuza [buradan ulaşabilirsiniz](docs/FEASIBILITY_REPORT.pdf).
 
 ### Hedef Kitle
 - Demir-çelik ve ağır sanayi ihracatçıları
@@ -94,6 +101,7 @@ CarbonPilot AI, demir-çelik başta olmak üzere ağır sanayi ihracatçıların
 | Frontend | React, Vite, TypeScript, Tailwind CSS, Recharts |
 | Tests | pytest (backend), Vitest/Playwright-ready (frontend) |
 | Observability | LangSmith-first configuration |
+| Deploy | Render (backend + PostgreSQL), Vercel (frontend) |
 
 ## Repository Structure
 
@@ -224,7 +232,38 @@ Dashboard varsayılan olarak `http://localhost:5173` adresinde açılır.
 
 ---
 
-# Sprint 3
+# Sprint 3 (20 Temmuz – 2 Ağustos)
+
+**Sprint Hedefi:** Gerçek multi-agent akışı, Law-RAG'in tam entegrasyonu, LangSmith gözlemlenebilirlik, PDF/JSON raporlama, frontend-backend entegrasyonu, JWT auth, production-ready Docker Compose, Vercel/Render deploy ve final demo videosu.
+
+- **Backlog düzeni ve Story seçimleri:** Sprint 3 kapsamı (CP-40 – CP-56), ürünü uçtan uca çalışan ve canlıya alınabilir hale getirmeye odaklandı: gerçek agent ayrımı ve Law-RAG entegrasyonu (CP-40–43), raporlama (CP-44–45), frontend entegrasyonu (CP-46–49), JWT auth (CP-50), test genişletme (CP-51–53), deploy (CP-54–55) ve final teslim (CP-56).
+
+- **Daily Scrum:** Daily Scrum toplantıları Slack ve WhatsApp üzerinden yürütülmüştür. Notlar: [Sprint 3 Daily Scrum Notları](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint3Documents/DailyScrumMeetingNotesSprint3.docx?raw=true)
+
+- **Sprint board update:**
+
+  <p align="center">
+    <img src="ProjectManagement/Sprint3Documents/board1.png" width="90%" alt="Sprint 3 board 1"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint3Documents/board2.png" width="90%" alt="Sprint 3 board 2"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint3Documents/summary.png" width="90%" alt="Sprint 3 özet"/>
+  </p>
+
+- **Ürün Durumu:**
+
+  <p align="center">
+    <img src="ProjectManagement/Sprint3Documents/backend1.png" width="90%" alt="Backend test çıktısı"/>
+  </p>
+
+- **Sprint Review:** Sprint 3 kapsamındaki 17 backlog kalemi tamamlandı. Dashboard artık gerçek backend'e bağlı (demo veri kaldırıldı), TR/EN dil desteği ve marka kimliği eklendi, JWT korumalı uçtan uca upload→calculate→download akışı Playwright E2E testiyle doğrulandı, backend Render'a, frontend Vercel'e canlıya alındı. Toplam 74 backend testi + frontend testleri yeşil.
+
+- **Sprint Retrospective:**
+  - Farklı ekip üyelerinin bağımsız çalıştığı özellikler (frontend entegrasyonu ve JWT auth gibi) birbirini kırabiliyor; entegrasyon noktalarını daha erken senkronize etmemiz gerektiğini öğrendik.
+  - Demo/gösterim amaçlı sahte veri eklemenin, projenin "gerçek ve denetlenebilir" ilkesiyle çelişebileceğini fark ettik — gerçek veriyle gösterim her zaman tercih edilmeli.
+  - Ücretsiz hosting seçeneklerinin hızla değiştiğini gördük; deploy kararını en son ana bırakmak yerine erken araştırmak zaman kazandırırdı.
 
 ---
 
@@ -239,6 +278,7 @@ Dashboard varsayılan olarak `http://localhost:5173` adresinde açılır.
 - [Setup](#setup)
 - [Sprint 1](#sprint-1-june-19--july-5)
 - [Sprint 2](#sprint-2-july-6--july-19)
+- [Sprint 3](#sprint-3-july-20--august-2)
 
 ---
 
@@ -274,6 +314,15 @@ CarbonPilot AI is an AI-assisted carbon accounting and decision-support platform
 - ✅ Critic Agent for hallucination/consistency auditing
 - 📱 Mobile-first carbon risk dashboard built with React + Tailwind
 
+### Business Model Canvas
+
+<p align="center">
+  <img src="docs/assets/BM-9.png" alt="Business Model Canvas" width="100%">
+</p>
+
+### Feasibility Report
+Our detailed feasibility report, covering market analysis, competitive assessment, and risk analysis, is available [here](docs/FEASIBILITY_REPORT.pdf).
+
 ### Target Audience
 - Iron, steel, and heavy industry exporters
 - Environmental engineers and sustainability directors
@@ -294,6 +343,7 @@ CarbonPilot AI is an AI-assisted carbon accounting and decision-support platform
 | Frontend | React, Vite, TypeScript, Tailwind CSS, Recharts |
 | Tests | pytest (backend), Vitest/Playwright-ready (frontend) |
 | Observability | LangSmith-first configuration |
+| Deploy | Render (backend + PostgreSQL), Vercel (frontend) |
 
 ## Repository Structure
 
@@ -424,4 +474,35 @@ The dashboard opens at `http://localhost:5173` by default.
 
 ---
 
-# Sprint 3
+# Sprint 3 (July 20 – August 2)
+
+**Sprint Goal:** Real multi-agent flow, full Law-RAG integration, LangSmith observability, PDF/JSON reporting, frontend-backend integration, JWT auth, production-ready Docker Compose, Vercel/Render deploy, and the final demo video.
+
+- **Backlog structure and story selection:** Sprint 3 scope (CP-40 – CP-56) focused on making the product work end-to-end and deployable: real agent separation and Law-RAG integration (CP-40–43), reporting (CP-44–45), frontend integration (CP-46–49), JWT auth (CP-50), expanded testing (CP-51–53), deployment (CP-54–55), and final delivery (CP-56).
+
+- **Daily Scrum:** Daily Scrum meetings were held via Slack and WhatsApp. Notes: [Sprint 3 Daily Scrum Notes](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint3Documents/DailyScrumMeetingNotesSprint3.docx?raw=true)
+
+- **Sprint board update:**
+
+  <p align="center">
+    <img src="ProjectManagement/Sprint3Documents/board1.png" width="90%" alt="Sprint 3 board 1"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint3Documents/board2.png" width="90%" alt="Sprint 3 board 2"/>
+  </p>
+  <p align="center">
+    <img src="ProjectManagement/Sprint3Documents/summary.png" width="90%" alt="Sprint 3 summary"/>
+  </p>
+
+- **Product Status:**
+
+  <p align="center">
+    <img src="ProjectManagement/Sprint3Documents/backend1.png" width="90%" alt="Backend test output"/>
+  </p>
+
+- **Sprint Review:** All 17 backlog items in Sprint 3 were completed. The dashboard is now wired to the real backend (demo data removed), TR/EN language support and branding were added, the JWT-protected upload→calculate→download flow was verified with a Playwright E2E test, and the backend/frontend were deployed to Render and Vercel. 74 backend tests plus the frontend test suite are all green.
+
+- **Sprint Retrospective:**
+  - Features built independently by different team members (e.g. frontend integration and JWT auth) could break each other; we learned to sync integration points earlier.
+  - We realized that adding fake data for demo purposes can conflict with the project's "real and auditable" principle — demoing with real data should always be preferred.
+  - Free hosting options change quickly; researching the deploy decision earlier rather than leaving it to the last moment would have saved time.
