@@ -157,7 +157,7 @@ Dashboard varsayılan olarak `http://localhost:5173` adresinde açılır.
 
 - **Backlog düzeni ve Story seçimleri:** Sprint 1 kapsamı, projenin en yüksek riskli ve test edilmesi gereken çekirdek modüllerini (veri şeması, hesaplama motoru, agent orkestrasyonu) içerecek şekilde front-loading mantığıyla seçilmiştir (CP-14 – CP-22). Ayrıca ekibin iş modeli/pazar analizi çalışmaları (CP-23 – CP-28) aynı sprint içinde tamamlanmıştır.
 
-- **Daily Scrum:** Daily Scrum toplantıları Slack ve WhatsApp üzerinden yürütülmüştür. Notlar: [Sprint 1 Daily Scrum Notları](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint1Documents/DailyScrumMeetingNotesSprint1.docx?raw=true)
+- **Daily Scrum:** Daily Scrum toplantıları Slack ve WhatsApp üzerinden yürütülmüştür. Notlar: [Sprint 1 Daily Scrum Notları](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint1Documents/DailyScrumMeetingNotesSprint1.docx)
 
 - **Sprint board update:**
 
@@ -198,7 +198,7 @@ Dashboard varsayılan olarak `http://localhost:5173` adresinde açılır.
 
 - **Backlog düzeni ve Story seçimleri:** Sprint 2 kapsamı (CP-29 – CP-39), bootcamp planlama dokümanındaki "Durum Yönetimi, Çok Katmanlı Bellek ve Simülasyon Motoru" hedefiyle birebir örtüşecek şekilde seçildi: veritabanı şeması ve ORM (CP-29, CP-31), hesaplama motorunun gerçek kalıcılığa bağlanması (CP-32), agent checkpointing ve state recovery (CP-33, CP-34), semantik ve epizodik bellek (CP-35, CP-36), optimizasyon ve simülasyon (CP-37, CP-38), ve son olarak Sprint 1'i doğrulayan regresyon test paketi (CP-39).
 
-- **Daily Scrum:** Daily Scrum toplantıları Slack ve WhatsApp üzerinden yürütülmüştür. Notlar: [Sprint 2 Daily Scrum Notları](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint2Documents/DailyScrumMeetingNotesSprint2.docx?raw=true)
+- **Daily Scrum:** Daily Scrum toplantıları Slack ve WhatsApp üzerinden yürütülmüştür. Notlar: [Sprint 2 Daily Scrum Notları](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint2Documents/DailyScrumMeetingNotesSprint2.docx)
 
 - **Sprint board update:**
 
@@ -239,7 +239,7 @@ Dashboard varsayılan olarak `http://localhost:5173` adresinde açılır.
 
 - **Backlog düzeni ve Story seçimleri:** Sprint 3 kapsamı (CP-40 – CP-56), ürünü uçtan uca çalışan ve canlıya alınabilir hale getirmeye odaklandı: gerçek agent ayrımı ve Law-RAG entegrasyonu (CP-40–43), raporlama (CP-44–45), frontend entegrasyonu (CP-46–49), JWT auth (CP-50), test genişletme (CP-51–53), deploy (CP-54–55) ve final teslim (CP-56).
 
-- **Daily Scrum:** Daily Scrum toplantıları Slack ve WhatsApp üzerinden yürütülmüştür. Notlar: [Sprint 3 Daily Scrum Notları](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint3Documents/DailyScrumMeetingNotesSprint3.docx?raw=true)
+- **Daily Scrum:** Daily Scrum toplantıları Slack ve WhatsApp üzerinden yürütülmüştür. Notlar: [Sprint 3 Daily Scrum Notları](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint3Documents/DailyScrumMeetingNotesSprint3.docx)
 
 - **Sprint board update:**
   <p align="center"><img src="ProjectManagement/Sprint3Documents/board1.png" width="90%"/></p>
@@ -391,7 +391,7 @@ The dashboard opens at `http://localhost:5173` by default.
 
 - **Backlog structure and story selection:** Sprint 1 scope was chosen using a front-loading approach, prioritizing the project's highest-risk, most test-critical core modules (data schemas, calculation engine, agent orchestration) — CP-14 through CP-22. The team's business model / market analysis work (CP-23 – CP-28) was also completed within the same sprint.
 
-- **Daily Scrum:** Daily Scrum meetings were held via Slack and WhatsApp due to scheduling constraints. Notes: [Sprint 1 Daily Scrum Notes](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint1Documents/DailyScrumMeetingNotesSprint1.docx?raw=true)
+- **Daily Scrum:** Daily Scrum meetings were held via Slack and WhatsApp due to scheduling constraints. Notes: [Sprint 1 Daily Scrum Notes](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint1Documents/DailyScrumMeetingNotesSprint1.docx)
 
 - **Sprint board update:**
 
@@ -432,7 +432,7 @@ The dashboard opens at `http://localhost:5173` by default.
 
 - **Backlog structure and story selection:** Sprint 2 scope (CP-29 – CP-39) mapped directly onto the bootcamp's planned "State Management, Multi-Layer Memory, and Simulation Engine" milestone: database schema and ORM (CP-29, CP-31), wiring the calculation engine to real persistence (CP-32), agent checkpointing and state recovery (CP-33, CP-34), semantic and episodic memory (CP-35, CP-36), optimization and simulation (CP-37, CP-38), and finally a regression suite proving Sprint 1 still holds (CP-39).
 
-- **Daily Scrum:** Daily Scrum meetings were held via Slack and WhatsApp. Notes: [Sprint 2 Daily Scrum Notes](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint2Documents/DailyScrumMeetingNotesSprint2.docx?raw=true)
+- **Daily Scrum:** Daily Scrum meetings were held via Slack and WhatsApp. Notes: [Sprint 2 Daily Scrum Notes](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint2Documents/DailyScrumMeetingNotesSprint2.docx)
 
 - **Sprint board update:**
 
@@ -473,7 +473,7 @@ The dashboard opens at `http://localhost:5173` by default.
 
 - **Backlog structure and story selection:** Sprint 3 scope (CP-40 – CP-56) focused on making the product work end-to-end and deployable: real agent separation and Law-RAG integration (CP-40–43), reporting (CP-44–45), frontend integration (CP-46–49), JWT auth (CP-50), expanded testing (CP-51–53), deployment (CP-54–55), and final delivery (CP-56).
 
-- **Daily Scrum:** Daily Scrum meetings were held via Slack and WhatsApp. Notes: [Sprint 3 Daily Scrum Notes](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint3Documents/DailyScrumMeetingNotesSprint3.docx?raw=true)
+- **Daily Scrum:** Daily Scrum meetings were held via Slack and WhatsApp. Notes: [Sprint 3 Daily Scrum Notes](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint3Documents/DailyScrumMeetingNotesSprint3.docx)
 
 - **Sprint board update:**
 
