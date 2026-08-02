@@ -241,22 +241,14 @@ Dashboard varsayılan olarak `http://localhost:5173` adresinde açılır.
 - **Daily Scrum:** Daily Scrum toplantıları Slack ve WhatsApp üzerinden yürütülmüştür. Notlar: [Sprint 3 Daily Scrum Notları](https://github.com/fatmanurdurmus/YZTA-BOOTCAMP-GRUP-9/blob/main/ProjectManagement/Sprint3Documents/DailyScrumMeetingNotesSprint3.docx?raw=true)
 
 - **Sprint board update:**
-
-  <p align="center">
-    <img src="ProjectManagement/Sprint3Documents/board1.png" width="90%" alt="Sprint 3 board 1"/>
-  </p>
-  <p align="center">
-    <img src="ProjectManagement/Sprint3Documents/board2.png" width="90%" alt="Sprint 3 board 2"/>
-  </p>
-  <p align="center">
-    <img src="ProjectManagement/Sprint3Documents/summary.png" width="90%" alt="Sprint 3 özet"/>
-  </p>
+  <p align="center"><img src="ProjectManagement/Sprint3Documents/board1.png" width="90%"/></p>
+  <p align="center"><img src="ProjectManagement/Sprint3Documents/board2.png" width="90%"/></p>
 
 - **Ürün Durumu:**
-
-  <p align="center">
-    <img src="ProjectManagement/Sprint3Documents/backend1.png" width="90%" alt="Backend test çıktısı"/>
-  </p>
+  <p align="center"><img src="ProjectManagement/Sprint3Documents/dashboard1.png" width="90%"/></p>
+  <p align="center"><img src="ProjectManagement/Sprint3Documents/dashboard2.png" width="90%"/></p>
+  <p align="center"><img src="ProjectManagement/Sprint3Documents/dashboard3.png" width="90%"/></p>
+  <p align="center"><img src="ProjectManagement/Sprint3Documents/backend1.png" width="90%"/></p>
 
 - **Sprint Review:** Sprint 3 kapsamındaki 17 backlog kalemi tamamlandı. Dashboard artık gerçek backend'e bağlı (demo veri kaldırıldı), TR/EN dil desteği ve marka kimliği eklendi, JWT korumalı uçtan uca upload→calculate→download akışı Playwright E2E testiyle doğrulandı, backend Render'a, frontend Vercel'e canlıya alındı. Toplam 74 backend testi + frontend testleri yeşil.
 

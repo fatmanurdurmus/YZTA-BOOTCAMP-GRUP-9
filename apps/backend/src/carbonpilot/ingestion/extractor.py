@@ -30,7 +30,7 @@ def extract_candidate_activity(*, document_text: str, filename: str, facility: F
         import google.generativeai as genai
 
         genai.configure(api_key=settings.gemini_api_key)
-        response = genai.GenerativeModel("gemini-1.5-flash").generate_content(
+        response = genai.GenerativeModel("gemini-2.5-flash").generate_content(
             prompt, generation_config={"response_mime_type": "application/json"}
         )
         payload = json.loads(response.text)
