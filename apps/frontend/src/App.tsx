@@ -59,6 +59,11 @@ const TRANSLATIONS = {
     backendConnected: "Backend Bağlandı",
     backendUnavailable: "Backend Erişilemez",
     verified: "Doğrulandı",
+    noCalculationYet: "Henüz hesaplama yok",
+    backendNotChecked: "Backend kontrol edilmedi",
+    backendStartWarning: "FastAPI servisini başlatıp tekrar deneyin.",
+    trendYoY: "%-14.2 Yıllık Değişim",
+    trendTaxExposure: "Mali Yük Risk Analizi",
     hotspotsTitle: "Karbon Risk Odakları (Hotspots)",
     hotspotsSubtitle: "Yüksek emisyonlu alanlar ve SKDM vergi riski",
     highExposure: "Yüksek Risk",
@@ -120,6 +125,11 @@ const TRANSLATIONS = {
     backendConnected: "Backend Connected",
     backendUnavailable: "Backend Unavailable",
     verified: "Verified",
+    noCalculationYet: "No calculation yet",
+    backendNotChecked: "Backend not checked",
+    backendStartWarning: "Please start the FastAPI service and try again.",
+    trendYoY: "-14.2% YoY",
+    trendTaxExposure: "Tax Exposure Analysis",
     hotspotsTitle: "Carbon Risk Hotspots",
     hotspotsSubtitle: "High-emission areas & CBAM tariff exposure",
     highExposure: "High Exposure",
@@ -207,15 +217,11 @@ export default function App() {
 
   const [showLanding, setShowLanding] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [emissions, setEmissions] = useState("14,250 tCO2e");
-  const [cbamCost, setCbamCost] = useState("€1,140,000");
-  const [criticStatus, setCriticStatus] = useState("Backend Connected");
+  const [emissions, setEmissions] = useState(t.noCalculationYet);
+  const [cbamCost, setCbamCost] = useState(t.noCalculationYet);
+  const [criticStatus, setCriticStatus] = useState(t.backendNotChecked);
   const [criticDetail, setCriticDetail] = useState(t.criticDetailReady);
-  const [agentTrail, setAgentTrail] = useState<string[]>([
-    "IngestionAgent: Document structure validated",
-    "ExtractionAgent: Candidate activity data extracted",
-    "CalculationEngine: Standardized factors applied"
-  ]);
+  const [agentTrail, setAgentTrail] = useState<string[]>([]);
   const [chartData, setChartData] = useState<ChartDataItem[]>(INITIAL_SCOPE_DATA);
   const [scenarioData] = useState<ScenarioDataItem[]>(INITIAL_TRANSFORMATION_PATH);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -266,7 +272,7 @@ export default function App() {
     } catch (error) {
       console.error("Error linking backend pipelines:", error);
       setCriticStatus(t.backendUnavailable);
-      setCriticDetail("FastAPI servisini başlatıp tekrar deneyin.");
+      setCriticDetail(t.backendStartWarning);
     } finally {
       setLoading(false);
     }
@@ -614,14 +620,14 @@ export default function App() {
             title={t.totalEmissions}
             value={emissions}
             detail={t.totalEmissionsDetail}
-            trend="-14.2% YoY"
+            trend={t.trendYoY}
             icon={<Activity size={22} aria-hidden="true" />}
           />
           <StatCard
             title={t.cbamCost}
             value={cbamCost}
             detail={t.cbamCostDetail}
-            trend="Tax Exposure"
+            trend={t.trendTaxExposure}
             icon={<FileCheck2 size={22} aria-hidden="true" />}
           />
           <StatCard
