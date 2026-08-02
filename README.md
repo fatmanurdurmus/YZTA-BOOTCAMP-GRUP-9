@@ -14,7 +14,8 @@
 <p align="center"><i>CBAM/SKDM uyumluluğu için yapay zeka destekli karbon muhasebesi platformu</i></p>
 
 <p align="center">
-  🌐 Canlı Demo: <i>yakında eklenecek</i> • 🎬 Demo Videosu: <i>yakında eklenecek</i>
+  🌐 <i>Canlı Demo: yakında eklenecek</i> •
+  🎬 <a href="https://youtu.be/fYzXqavTT40">Demo Videosu</a>
 </p>
 
 <p align="center">
